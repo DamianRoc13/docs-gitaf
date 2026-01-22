@@ -1,0 +1,30 @@
+---
+title: Explicación Técnica
+description: Detalles del funcionamiento de GITAF
+---
+
+import { Cards, Card } from 'fumadocs-ui/components/card';
+
+## Diagrama de Funcionalidad
+
+## Explicaciones técnicas
+
+Aquí se detalla el funcionamiento del sistema GITAF basado en la arquitectura de hardware y software.
+
+<Cards>
+  <Card title="📱 1. Interfaz de Control" href="#">
+    App Android con soporte **TalkBack** y Alto Contraste. Gestiona la conexión Bluetooth y la selección del poste a sonar.
+  </Card>
+  
+  <Card title="🧠 2. Módulo Maestro" href="#">
+    El cerebro del sistema (ESP32). Recibe órdenes vía Bluetooth y las transmite a los postes vía **ESP-NOW**.
+  </Card>
+
+  <Card title="🔊 3. Módulos de Sonido" href="#">
+    Dispositivos inalámbricos en la portería. Cada uno tiene batería independiente y recepción de señal instantánea.
+  </Card>
+
+  <Card title="users 4. Usuarios (ANVIZSUC)" href="#">
+    Enfocado en Fútbol 5 Adaptado (B1) para mejorar la autonomía de tiro y orientación espacial.
+  </Card>
+</Cards>
