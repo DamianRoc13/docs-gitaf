@@ -39,7 +39,7 @@ export function LLMCopyButton({
     }
   });
 
-  return (
+/*   return (
     <button
       disabled={isLoading}
       className={cn(
@@ -54,7 +54,7 @@ export function LLMCopyButton({
       {checked ? <Check /> : <Copy />}
       Copy Markdown
     </button>
-  );
+  ); */
 }
 
 export function ViewOptions({
@@ -71,7 +71,7 @@ export function ViewOptions({
    */
   githubUrl: string;
 }) {
-  const items = useMemo(() => {
+  /* const items = useMemo(() => {
     const fullMarkdownUrl =
       typeof window !== 'undefined' ? new URL(markdownUrl, window.location.origin) : 'loading';
     const q = `Read ${fullMarkdownUrl}, I want to ask questions about it.`;
@@ -194,9 +194,9 @@ export function ViewOptions({
         icon: <MessageCircleIcon />,
       },
     ];
-  }, [githubUrl, markdownUrl]);
+  }, [githubUrl, markdownUrl]); */
 
-  return (
+  /* return (
     <Popover>
       <PopoverTrigger
         className={cn(
@@ -226,5 +226,5 @@ export function ViewOptions({
         ))}
       </PopoverContent>
     </Popover>
-  );
+  ); */
 }
