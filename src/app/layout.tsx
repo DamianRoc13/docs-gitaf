@@ -9,11 +9,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Gitaf Docs',
-    template: '%s | Gitaf Docs',
+    default: 'Gitaf',
+    template: '%s | Gitaf',
   },
-  description: 'Documentación oficial de GITAF: Sistema de Orientación Audible Inalámbrico para el Entrenamiento de Fútbol Adaptado.',
-  metadataBase: new URL('https://docs.gitafpro.com'),
+  description: 'Sistema de Orientación Audible Inalámbrico para el Entrenamiento de Fútbol Adaptado.',
+  metadataBase: new URL('https://gitaf.pro'),
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
