@@ -103,6 +103,14 @@ export default function HomePage() {
     }
     img {
         animation: glowPulse 3s ease-in-out infinite alternate;
+        margin-left: 1rem;
+    }
+    @media (max-width: 768px) {
+        img {
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
     }
     @keyframes glowPulse {
         from {
@@ -120,12 +128,24 @@ export default function HomePage() {
         text-transform: uppercase;
         text-shadow: 0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px rgba(138, 43, 226, 0.3);
     }
+    @media (max-width: 768px) {
+        .content {
+            padding: 0 1rem;
+            width: 100%;
+        }
+        .tagline {
+            font-size: clamp(0.7rem, 3vw, 0.9rem);
+            letter-spacing: 0.1em;
+            line-height: 1.5;
+        }
+    }
     .buttons {
         display: flex;
         justify-content: center;
         gap: 24px;
         margin-top: 40px;
         pointer-events: auto;
+        flex-wrap: wrap;
     }
     .glass-button {
         position: relative;
@@ -233,6 +253,12 @@ export default function HomePage() {
     .glass-button span {
         position: relative;
         z-index: 1;
+    }
+    @media (max-width: 768px) {
+        .glass-button {
+            padding: 14px 32px;
+            font-size: 0.9rem;
+        }
     }
       `}} />
       <canvas id="canvas"></canvas>
