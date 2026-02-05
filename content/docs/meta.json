@@ -1,0 +1,12 @@
+{
+  "title": "Documentación",
+  "pages": [
+    "introduction",
+    "architecture",
+    "functionality",
+    "mobile",
+    "hardware",
+    "firmware",
+    "support"
+  ]
+}

@@ -1,11 +1,116 @@
 ---
 title: GITAF  
-description: Bienvenido a la documentación oficial de GITAF.
+description: Bienvenido a la documentación oficial de GITAF - Sistema de Entrenamiento Deportivo con ESP32
 ---
 
-## Exploremos
+import { Card, Cards } from 'fumadocs-ui/components/card';
+
+## Sistema de Entrenamiento Deportivo
+
+**GITAF** es un sistema de entrenamiento inteligente basado en ESP32 que utiliza señales de audio para guiar atletas durante ejercicios de agilidad. La comunicación inalámbrica mediante ESP-NOW permite un control preciso y de baja latencia entre dispositivos.
+
+## 📚 Documentación
 
 <Cards>
-  <Card title="Revisa la funcionalidad de GITAF" href="/docs/functionality" />
-  <Card title="Revisa cómo está compuesta el app de GITAF" href="/docs/mobile "/>
+  <Card 
+    title="Introducción" 
+    href="/docs/introduction"
+    description="Visión general del sistema, objetivos y características principales"
+  />
+  <Card 
+    title="Arquitectura del Sistema" 
+    href="/docs/architecture"
+    description="Arquitectura técnica, protocolos de comunicación y flujos de datos"
+  />
 </Cards>
+
+### Hardware y Electrónica
+
+<Cards>
+  <Card 
+    title="Componentes" 
+    href="/docs/hardware/components"
+    description="Lista completa de componentes (BOM) y especificaciones técnicas"
+  />
+  <Card 
+    title="Diagramas de Conexión" 
+    href="/docs/hardware/diagrams"
+    description="Esquemas de cableado, pinouts y diagramas del sistema completo"
+  />
+  <Card 
+    title="Gestión de Energía" 
+    href="/docs/hardware/power"
+    description="Administración de baterías, consumo y optimización energética"
+  />
+</Cards>
+
+### Firmware ESP32
+
+<Cards>
+  <Card 
+    title="Configuración del Entorno" 
+    href="/docs/firmware/setup"
+    description="Instalación de Arduino IDE, PlatformIO y configuración inicial"
+  />
+  <Card 
+    title="Comunicación ESP-NOW" 
+    href="/docs/firmware/communication"
+    description="Implementación de protocolo ESP-NOW para maestro y esclavos"
+  />
+  <Card 
+    title="Lógica de Audio" 
+    href="/docs/firmware/audio"
+    description="Generación de señales de audio mediante DAC y control de amplificadores"
+  />
+</Cards>
+
+### Aplicación Móvil
+
+<Cards>
+  <Card 
+    title="Funcionalidad del Sistema" 
+    href="/docs/functionality"
+    description="Diagrama funcional y descripción del flujo de trabajo"
+  />
+  <Card 
+    title="App Android" 
+    href="/docs/mobile"
+    description="Interfaz de usuario, conexión Bluetooth y controles"
+  />
+</Cards>
+
+### Soporte
+
+<Cards>
+  <Card 
+    title="Solución de Problemas" 
+    href="/docs/support/troubleshooting"
+    description="Troubleshooting, FAQ y diagnóstico de problemas comunes"
+  />
+</Cards>
+
+---
+
+## 🚀 Inicio Rápido
+
+1. **[Revisa la arquitectura](/docs/architecture)** para entender cómo funciona el sistema
+2. **[Consigue los componentes](/docs/hardware/components)** necesarios para construir GITAF
+3. **[Configura tu entorno](/docs/firmware/setup)** de desarrollo ESP32
+4. **[Implementa la comunicación](/docs/firmware/communication)** ESP-NOW
+5. **[Programa el audio](/docs/firmware/audio)** para los beacons
+6. **[Instala la app móvil](/docs/mobile)** para controlar el sistema
+
+## 🛠️ Tecnologías Utilizadas
+
+- **ESP32** - Microcontrolador con WiFi integrado
+- **ESP-NOW** - Protocolo de comunicación de baja latencia
+- **PAM8403** - Amplificador Clase D para audio
+- **Li-Po + TP4056** - Sistema de batería recargable
+- **React Native** - Framework para la aplicación móvil
+- **Bluetooth LE** - Comunicación entre app y dispositivo maestro
+
+---
+
+<div style={{textAlign: 'center', marginTop: '2rem'}}>
+  ¿Necesitas ayuda? Consulta la [sección de soporte](/docs/support/troubleshooting)
+</div>

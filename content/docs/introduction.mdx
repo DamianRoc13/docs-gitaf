@@ -1,0 +1,57 @@
+---
+title: Introducción
+description: Bienvenido a la documentación oficial de GITAF - Sistema de Orientación Audible Inalámbrico
+---
+
+import { Cards, Card } from 'fumadocs-ui/components/card';
+
+## ¿Qué es GITAF?
+
+**GITAF** (Guía Interactiva de Tiro para Atletas con Discapacidad Visual en Fútbol) es un sistema de orientación audible inalámbrico diseñado para el entrenamiento de fútbol adaptado. Este proyecto proporciona autonomía a deportistas con discapacidad visual durante la práctica del Fútbol 5.
+
+## Características Principales
+
+- 🔊 **Orientación por Audio**: Sistema de posicionamiento mediante señales sonoras
+- 📱 **Control Móvil**: Aplicación Android accesible con soporte TalkBack
+- 🔋 **Inalámbrico**: Comunicación ESP-NOW sin necesidad de cables
+- ♿ **Accesible**: Diseñado específicamente para personas con discapacidad visual
+- ⚡ **Eficiente**: Gestión inteligente de energía para larga duración
+
+## Explora la Documentación
+
+<Cards>
+  <Card title="Funcionalidad de GITAF" href="/docs/functionality" icon="Zap">
+    Conoce cómo funciona el sistema y su arquitectura general
+  </Card>
+  
+  <Card title="Arquitectura del Sistema" href="/docs/architecture" icon="Network">
+    Detalles técnicos de la arquitectura y componentes del sistema
+  </Card>
+  
+  <Card title="Hardware y Electrónica" href="/docs/hardware/components" icon="Cpu">
+    Lista de componentes, diagramas y gestión de energía
+  </Card>
+  
+  <Card title="Firmware ESP32" href="/docs/firmware/setup" icon="Code">
+    Configuración, comunicación inalámbrica y lógica de audio
+  </Card>
+  
+  <Card title="Aplicación Móvil" href="/docs/mobile" icon="Smartphone">
+    Guía completa de la aplicación Android
+  </Card>
+  
+  <Card title="Soporte" href="/docs/support/troubleshooting" icon="HelpCircle">
+    Solución de problemas y preguntas frecuentes
+  </Card>
+</Cards>
+
+## Objetivo del Proyecto
+
+El sistema GITAF fue desarrollado para **ANVIZSUC** (Asociación Nacional de Videntes al Servicio de las Personas Ciegas del Zulia), con el objetivo de mejorar la autonomía en el tiro y la orientación espacial de los deportistas sin depender de un guía humano durante los entrenamientos.
+
+## Tecnologías Utilizadas
+
+- **ESP32**: Microcontrolador con WiFi y Bluetooth integrado
+- **ESP-NOW**: Protocolo de comunicación inalámbrica de bajo consumo
+- **Android**: Aplicación móvil nativa con accesibilidad
+- **Bluetooth LE**: Conexión de bajo consumo entre app y hardware

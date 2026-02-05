@@ -1,0 +1,157 @@
+---
+title: Lista de Componentes (BOM)
+description: Bill of Materials completo para construir el sistema GITAF
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+## Bill of Materials (BOM)
+
+Lista completa de componentes necesarios para construir el sistema GITAF con tres postes.
+
+### Módulo Maestro
+
+| Cantidad | Componente | Especificaciones | Propósito |
+|----------|-----------|------------------|-----------|
+| 1 | ESP32 DevKit V1 | 38 pines, WiFi/BT | Controlador principal |
+| 1 | Cable USB Micro-B | 1m, datos + carga | Programación y alimentación |
+| 1 | Powerbank | 10,000 mAh, 5V/2A | Alimentación portátil |
+| 1 | Caja protectora | IP54, 10x8x5 cm | Protección del módulo |
+
+<Callout type="info">
+El módulo maestro puede ser alimentado permanentemente mediante una fuente de 5V DC si se instala en posición fija.
+</Callout>
+
+### Módulos Esclavos (x3)
+
+| Cantidad | Componente | Especificaciones | Propósito |
+|----------|-----------|------------------|-----------|
+| 3 | ESP32 DevKit V1 | 38 pines, WiFi/BT | Controladores de poste |
+| 3 | Altavoz PAM8403 | 3W, 4Ω, amplificador integrado | Emisión de audio |
+| 3 | Batería Li-Po | 3.7V, 2000 mAh | Alimentación autónoma |
+| 3 | Módulo TP4056 | Carga de Li-Po, protección | Gestión de batería |
+| 3 | Interruptor ON/OFF | 3A, 12V | Encendido/apagado |
+| 3 | Caja resistente | Impermeable, soporte poste | Montaje en portería |
+| 3 | Cables Dupont | Macho-Hembra, 20cm | Conexiones internas |
+
+### Componentes Adicionales
+
+| Cantidad | Componente | Especificaciones | Notas |
+|----------|-----------|------------------|-------|
+| 1 | Cable USB-C | 2m, carga rápida | Para powerbank del maestro |
+| 3 | Cable Micro-USB | 50cm, carga | Para cargar baterías esclavas |
+| 1 | Rollo soldadura | Estaño 60/40, 0.8mm | Conexiones permanentes |
+| 1 | Set termoencogible | Varios diámetros | Aislamiento de soldaduras |
+| 4 | Velcro adhesivo | 5cm x 50cm | Montaje removible |
+| 1 | Cinta aislante | Negro, 19mm x 20m | Protección adicional |
+
+## Especificaciones Técnicas Detalladas
+
+### ESP32 DevKit V1
+
+- **MCU**: Xtensa dual-core 32-bit LX6
+- **Frecuencia**: 160/240 MHz
+- **RAM**: 520 KB SRAM
+- **Flash**: 4 MB
+- **WiFi**: 802.11 b/g/n
+- **Bluetooth**: BLE 4.2 + Classic
+- **GPIO**: 34 pines (algunos compartidos)
+- **ADC**: 2x 12-bit SAR ADC
+- **Voltaje operación**: 3.0V - 3.6V
+- **Entrada USB**: 5V regulado a 3.3V
+
+<Callout type="warn">
+Los ESP32 son sensibles a voltajes superiores a 3.6V en los pines GPIO. Nunca conectes directamente señales de 5V sin divisor de voltaje o level shifter.
+</Callout>
+
+### Altavoz PAM8403
+
+- **Potencia**: 3W por canal (clase D)
+- **Impedancia**: 4Ω recomendado
+- **Voltaje**: 2.5V - 5.5V DC
+- **Ganancia**: Ajustable por potenciómetro
+- **Eficiencia**: ~90% (clase D)
+- **Respuesta frecuencia**: 20Hz - 20kHz
+- **THD**: &lt;10% a 3W
+
+**Conexión con ESP32**:
+- VCC → 3.3V o 5V
+- GND → GND
+- IN+ → GPIO (PWM, ej: GPIO25)
+- IN- → GND (modo mono)
+
+### Batería Li-Po 2000 mAh
+
+- **Voltaje nominal**: 3.7V
+- **Voltaje carga**: 4.2V máx
+- **Voltaje descarga**: 3.0V mín
+- **Corriente descarga**: 2C (4A máx)
+- **Protección**: PCM integrado
+- **Ciclos vida**: ~500 ciclos
+- **Autonomía estimada**: 4-6 horas uso continuo
+
+### Módulo de Carga TP4056
+
+- **Corriente carga**: 1A (ajustable)
+- **Voltaje entrada**: 5V (Micro-USB)
+- **Protección sobrecarga**: ✓
+- **Protección sobre-descarga**: ✓
+- **Protección cortocircuito**: ✓
+- **LED indicadores**: Carga (rojo) / Completo (azul)
+
+## Estimación de Costos
+
+| Categoría | Costo Unitario | Cantidad | Total |
+|-----------|----------------|----------|-------|
+| **Módulo Maestro** | | | |
+| ESP32 | $8 | 1 | $8 |
+| Powerbank | $15 | 1 | $15 |
+| Caja + accesorios | $10 | 1 | $10 |
+| **Módulos Esclavos** | | | |
+| ESP32 | $8 | 3 | $24 |
+| Altavoz PAM8403 | $3 | 3 | $9 |
+| Batería Li-Po | $7 | 3 | $21 |
+| TP4056 | $1 | 3 | $3 |
+| Cajas + montaje | $12 | 3 | $36 |
+| **Accesorios** | | | |
+| Cables y conectores | $15 | 1 | $15 |
+| Herramientas consumibles | $10 | 1 | $10 |
+| **TOTAL ESTIMADO** | | | **~$151** |
+
+<Callout type="info">
+Los precios son aproximados y varían según el proveedor. Considera comprar componentes de respaldo para reemplazos futuros.
+</Callout>
+
+## Proveedores Recomendados
+
+### Internacionales
+- **AliExpress**: ESP32, baterías, módulos de carga (envío lento, bajo costo)
+- **Amazon**: Powerbanks, cajas protectoras (envío rápido)
+- **DigiKey/Mouser**: Componentes certificados (alta calidad, mayor costo)
+
+### Locales (Venezuela)
+- **MercadoLibre**: Mayoría de componentes
+- **Tiendas de electrónica locales**: Cables, soldadura, herramientas
+- **Importadoras**: ESP32 y módulos especializados
+
+## Herramientas Necesarias
+
+### Básicas
+- Soldador de estaño (60W recomendado)
+- Pinzas y alicates
+- Destornilladores (Phillips y plano)
+- Multímetro digital
+
+### Opcionales pero Recomendadas
+- Pistola de calor (para termoencogible)
+- Estación de soldadura con control temperatura
+- Soporte de tercera mano
+- Extractor de humos
+
+## Próximos Pasos
+
+Ahora que conoces los componentes, continúa con:
+
+- [Diagramas de Conexión](/docs/hardware/diagrams): Esquemas de cableado completos
+- [Gestión de Energía](/docs/hardware/power): Optimización de batería y consumo
+- [Configuración del Firmware](/docs/firmware/setup): Programación de los ESP32
