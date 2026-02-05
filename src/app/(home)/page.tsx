@@ -220,7 +220,7 @@ export default function HomePage() {
         animation: glowPulse 3s ease-in-out infinite alternate;
     }
     img {
-        margin-left: 3rem;
+        margin-left: 1rem;
     }
     
     @media (min-width: 769px) {
