@@ -5,11 +5,35 @@ import { useEffect } from 'react';
 export default function HomePage() {
   useEffect(() => {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!canvas) return;
+    
+    // Detectar mobile y usar versión simplificada
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    const gl = (canvas.getContext('webgl', { 
+      preserveDrawingBuffer: true,
+      antialias: false,
+      powerPreference: isMobile ? 'low-power' : 'default'
+    }) || canvas.getContext('experimental-webgl', { 
+      preserveDrawingBuffer: true,
+      antialias: false,
+      powerPreference: isMobile ? 'low-power' : 'default'
+    })) as WebGLRenderingContext | null;
+    
     if (!gl) {
-        alert('WebGL not supported');
+        console.error('WebGL not supported');
         return;
     }
+    
+    // Manejar pérdida de contexto WebGL
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.log('WebGL context lost');
+    });
+    
+    canvas.addEventListener('webglcontextrestored', () => {
+      console.log('WebGL context restored');
+    });
    
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -46,7 +70,35 @@ export default function HomePage() {
         }
         return program;
     }
-  
+   
+    const vertexShaderSource = document.getElementById('vertexShader')?.textContent || '';
+    const fragmentShaderSource = document.getElementById('fragmentShader')?.textContent || '';
+   
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+    if (!vertexShader || !fragmentShader) {
+      console.error('Failed to create shaders');
+      return;
+    }
+    
+    const program = createProgram(gl, vertexShader, fragmentShader);
+    if (!program) {
+      console.error('Failed to create program');
+      return;
+    }
+   
+    const uTime = gl.getUniformLocation(program, 'uTime');
+    const uResolution = gl.getUniformLocation(program, 'uResolution');
+   
+    const positions = new Float32Array([
+        -1, -1,
+         1, -1,
+        -1, 1,
+         1, 1,
+    ]);
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
    
     document.querySelectorAll('.glass-button').forEach(button => {
         button.addEventListener('mousemove', (e: Event) => {
@@ -59,6 +111,45 @@ export default function HomePage() {
         });
     });
    
+    let startTime = Date.now();
+    let animationId: number;
+    let isRunning = true;
+    
+    function render() {
+        if (!isRunning || !gl || !program || !positionBuffer) return;
+        
+        try {
+          const currentTime = (Date.now() - startTime) * 0.001;
+         
+          gl.clearColor(0.0, 0.0, 0.0, 1.0);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.useProgram(program);
+         
+          gl.uniform1f(uTime, currentTime);
+          gl.uniform2f(uResolution, canvas.width, canvas.height);
+         
+          const positionLocation = gl.getAttribLocation(program, 'position');
+          gl.enableVertexAttribArray(positionLocation);
+          gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+          gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+         
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+         
+          animationId = requestAnimationFrame(render);
+        } catch (error) {
+          console.error('Error rendering:', error);
+          isRunning = false;
+        }
+    }
+    render();
+
+    return () => {
+      isRunning = false;
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
   }, []);
 
   return (
