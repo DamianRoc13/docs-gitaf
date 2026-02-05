@@ -163,29 +163,7 @@ export default function HomePage() {
         left: 0;
         width: 100%;
         height: 100vh;
-        background: 
-            radial-gradient(ellipse at 30% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
-            radial-gradient(ellipse at 70% 60%, rgba(38, 77, 153, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.08) 0%, transparent 70%),
-            linear-gradient(180deg, #000000 0%, #0a0015 50%, #000000 100%);
-        animation: mobileGradient 8s ease-in-out infinite;
-    }
-    
-    @keyframes mobileGradient {
-        0%, 100% {
-            background: 
-                radial-gradient(ellipse at 30% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 70% 60%, rgba(38, 77, 153, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.08) 0%, transparent 70%),
-                linear-gradient(180deg, #000000 0%, #0a0015 50%, #000000 100%);
-        }
-        50% {
-            background: 
-                radial-gradient(ellipse at 70% 60%, rgba(76, 29, 149, 0.18) 0%, transparent 50%),
-                radial-gradient(ellipse at 30% 40%, rgba(38, 77, 153, 0.18) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(0, 191, 255, 0.1) 0%, transparent 70%),
-                linear-gradient(180deg, #000000 0%, #0a0015 50%, #000000 100%);
-        }
+        background: linear-gradient(180deg, #0a0012 0%, #000000 100%);
     }
     
     @media (max-width: 768px) {
@@ -199,6 +177,26 @@ export default function HomePage() {
         width: 100%;
         height: 100vh;
     }
+    
+    @keyframes glowPulse {
+        from {
+            filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 80px rgba(138, 43, 226, 0.3));
+        }
+        to {
+            filter: drop-shadow(0 0 60px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 120px rgba(0, 191, 255, 0.4));
+        }
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%) rotate(30deg); }
+        100% { transform: translateX(100%) rotate(30deg); }
+    }
+    
+    @keyframes borderFlow {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+    }
+    
     .content {
         position: fixed;
         top: 50%;
@@ -222,22 +220,21 @@ export default function HomePage() {
         animation: glowPulse 3s ease-in-out infinite alternate;
     }
     img {
-        animation: glowPulse 3s ease-in-out infinite alternate;
         margin-left: 3rem;
     }
+    
+    @media (min-width: 769px) {
+        img {
+            animation: glowPulse 3s ease-in-out infinite alternate;
+        }
+    }
+    
     @media (max-width: 768px) {
         img {
             margin-left: auto;
             margin-right: auto;
             display: block;
-        }
-    }
-    @keyframes glowPulse {
-        from {
-            filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 80px rgba(138, 43, 226, 0.3));
-        }
-        to {
-            filter: drop-shadow(0 0 60px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 120px rgba(0, 191, 255, 0.4));
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2));
         }
     }
     .tagline {
@@ -246,7 +243,7 @@ export default function HomePage() {
         color: rgba(255, 255, 255, 0.9);
         letter-spacing: 0.3em;
         text-transform: uppercase;
-        text-shadow: 0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px rgba(138, 43, 226, 0.3);
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
     }
     @media (max-width: 768px) {
         .content {
@@ -257,6 +254,7 @@ export default function HomePage() {
             font-size: clamp(0.7rem, 3vw, 0.9rem);
             letter-spacing: 0.1em;
             line-height: 1.5;
+            text-shadow: none;
         }
     }
     .buttons {
@@ -274,101 +272,74 @@ export default function HomePage() {
         font-weight: 600;
         letter-spacing: 0.08em;
         color: #fff;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-        border: 1.5px solid transparent;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
         border-radius: 40px;
-        backdrop-filter: blur(30px);
-        box-shadow:
-            0 8px 32px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2),
-            inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         overflow: hidden;
         cursor: pointer;
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: auto;
     }
+    
+    @media (min-width: 769px) {
+        .glass-button {
+            backdrop-filter: blur(30px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 40px;
+            padding: 1.5px;
+            background: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.4) 0%,
+                rgba(138, 43, 226, 0.4) 25%,
+                rgba(0, 191, 255, 0.4) 50%,
+                rgba(255, 105, 180, 0.4) 75%,
+                rgba(255, 255, 255, 0.4) 100%);
+            background-size: 200% 200%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: borderFlow 3s linear infinite;
+            opacity: 0.6;
+            transition: opacity 0.5s ease;
+        }
+        
+        .glass-button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 40px;
+            background: radial-gradient(circle at var(--x, 50%) var(--y, 50%),
+                rgba(255, 255, 255, 0.2) 0%,
+                transparent 50%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .glass-button:hover {
+            transform: translateY(-3px) scale(1.02);
+        }
+        
+        .glass-button:hover::before {
+            opacity: 1;
+            animation-duration: 2s;
+        }
+        
+        .glass-button:hover::after {
+            opacity: 1;
+        }
+        
+        .glass-button:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+    }
    
-    .glass-button::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 40px;
-        padding: 1.5px;
-        background: linear-gradient(135deg,
-            rgba(255, 255, 255, 0.4) 0%,
-            rgba(138, 43, 226, 0.4) 25%,
-            rgba(0, 191, 255, 0.4) 50%,
-            rgba(255, 105, 180, 0.4) 75%,
-            rgba(255, 255, 255, 0.4) 100%);
-        background-size: 200% 200%;
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        animation: borderFlow 3s linear infinite;
-        opacity: 0.6;
-        transition: opacity 0.5s ease;
-    }
-    @keyframes borderFlow {
-        0% { background-position: 0% 50%; }
-        100% { background-position: 200% 50%; }
-    }
-    .glass-button::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 40px;
-        background: radial-gradient(circle at var(--x, 50%) var(--y, 50%),
-            rgba(255, 255, 255, 0.2) 0%,
-            transparent 50%);
-        opacity: 0;
-        transition: opacity 0.5s ease;
-    }
-    .glass-button:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
-        box-shadow:
-            0 12px 48px rgba(138, 43, 226, 0.3),
-            0 0 80px rgba(0, 191, 255, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3),
-            inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-        transform: translateY(-3px) scale(1.02);
-    }
-    .glass-button:hover::before {
-        opacity: 1;
-        animation-duration: 2s;
-    }
-    .glass-button:hover::after {
-        opacity: 1;
-    }
-    .glass-button:active {
-        transform: translateY(-1px) scale(0.98);
-        box-shadow:
-            0 6px 24px rgba(138, 43, 226, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
     .glass-button .shimmer {
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(255, 255, 255, 0.1) 45%,
-            rgba(255, 255, 255, 0.3) 50%,
-            rgba(255, 255, 255, 0.1) 55%,
-            transparent 100%
-        );
-        transform: rotate(30deg);
-        animation: shimmer 3s infinite;
-        pointer-events: none;
-    }
-    @keyframes shimmer {
-        0% { transform: translateX(-100%) rotate(30deg); }
-        100% { transform: translateX(100%) rotate(30deg); }
-    }
-    .glass-button:hover .shimmer {
-        animation-duration: 1.5s;
+        display: none;
     }
     .glass-button span {
         position: relative;
@@ -378,21 +349,22 @@ export default function HomePage() {
         .glass-button {
             padding: 14px 32px;
             font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: none;
         }
     }
       `}} />
       <div className="mobile-background"></div>
       <canvas id="canvas"></canvas>
       <div className="content">
-          <img src="/gitaf.svg" alt="GITAF" style={{width: 'clamp(300px, 50vw, 700px)', marginBottom: '2rem', filter: 'drop-shadow(0 0 40px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 80px rgba(138, 43, 226, 0.3))'}} />
+          <img src="/gitaf.svg" alt="GITAF" style={{width: 'clamp(300px, 50vw, 700px)', marginBottom: '2rem'}} />
           <p className="tagline">Sistema de Orientación Audible Inalámbrico para el Entrenamiento de Fútbol Adaptado</p>
           <div className="buttons">
               <a href="/docs" className="glass-button">
-                  <span className="shimmer"></span>
                   <span>Documentación</span>
               </a>
               <a href="https://github.com/DamianRoc13/FutSensitive" target="_blank" rel="noopener noreferrer" className="glass-button">
-                  <span className="shimmer"></span>
                   <span>GitHub</span>
               </a>
           </div>
