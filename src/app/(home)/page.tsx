@@ -4,36 +4,26 @@ import { useEffect } from 'react';
 
 export default function HomePage() {
   useEffect(() => {
+    // Detectar mobile y NO usar WebGL
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // En mobile, solo ocultar el canvas y usar CSS background
+      const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+      if (canvas) canvas.style.display = 'none';
+      return;
+    }
+    
+    // Solo desktop usa WebGL
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
     if (!canvas) return;
     
-    // Detectar mobile y usar versión simplificada
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
-    const gl = (canvas.getContext('webgl', { 
-      preserveDrawingBuffer: true,
-      antialias: false,
-      powerPreference: isMobile ? 'low-power' : 'default'
-    }) || canvas.getContext('experimental-webgl', { 
-      preserveDrawingBuffer: true,
-      antialias: false,
-      powerPreference: isMobile ? 'low-power' : 'default'
-    })) as WebGLRenderingContext | null;
+    const gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
     
     if (!gl) {
         console.error('WebGL not supported');
         return;
     }
-    
-    // Manejar pérdida de contexto WebGL
-    canvas.addEventListener('webglcontextlost', (e) => {
-      e.preventDefault();
-      console.log('WebGL context lost');
-    });
-    
-    canvas.addEventListener('webglcontextrestored', () => {
-      console.log('WebGL context restored');
-    });
    
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -165,6 +155,45 @@ export default function HomePage() {
         overflow: hidden;
         background: #000;
     }
+    
+    .mobile-background {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: 
+            radial-gradient(ellipse at 30% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 60%, rgba(38, 77, 153, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.08) 0%, transparent 70%),
+            linear-gradient(180deg, #000000 0%, #0a0015 50%, #000000 100%);
+        animation: mobileGradient 8s ease-in-out infinite;
+    }
+    
+    @keyframes mobileGradient {
+        0%, 100% {
+            background: 
+                radial-gradient(ellipse at 30% 50%, rgba(76, 29, 149, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(38, 77, 153, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.08) 0%, transparent 70%),
+                linear-gradient(180deg, #000000 0%, #0a0015 50%, #000000 100%);
+        }
+        50% {
+            background: 
+                radial-gradient(ellipse at 70% 60%, rgba(76, 29, 149, 0.18) 0%, transparent 50%),
+                radial-gradient(ellipse at 30% 40%, rgba(38, 77, 153, 0.18) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(0, 191, 255, 0.1) 0%, transparent 70%),
+                linear-gradient(180deg, #000000 0%, #0a0015 50%, #000000 100%);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .mobile-background {
+            display: block;
+        }
+    }
+    
     canvas {
         display: block;
         width: 100%;
@@ -194,7 +223,7 @@ export default function HomePage() {
     }
     img {
         animation: glowPulse 3s ease-in-out infinite alternate;
-        margin-left: 1rem;
+        margin-left: 3rem;
     }
     @media (max-width: 768px) {
         img {
@@ -352,6 +381,7 @@ export default function HomePage() {
         }
     }
       `}} />
+      <div className="mobile-background"></div>
       <canvas id="canvas"></canvas>
       <div className="content">
           <img src="/gitaf.svg" alt="GITAF" style={{width: 'clamp(300px, 50vw, 700px)', marginBottom: '2rem', filter: 'drop-shadow(0 0 40px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 80px rgba(138, 43, 226, 0.3))'}} />
