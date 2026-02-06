@@ -11,16 +11,16 @@ El ESP32 puede generar señales de audio de múltiples formas:
 
 | Método | Calidad | CPU Usage | Complejidad | Uso en GITAF |
 |--------|---------|-----------|-------------|--------------|
-| **PWM** | Baja | Muy bajo | Simple | ❌ No usado |
-| **DAC** | Media | Bajo | Media | ✅ **Usado** |
-| **I2S** | Alta | Medio | Alta | ⭕ Futuro |
-| **DFPlayer** | Muy Alta | Ninguno | Baja | ⭕ Opcional |
+| **PWM** | Baja | Muy bajo | Simple | No usado |
+| **DAC** | Media | Bajo | Media | **Usado** |
+| **I2S** | Alta | Medio | Alta | Futuro |
+| **DFPlayer** | Muy Alta | Ninguno | Baja | Opcional |
 
 Para GITAF usamos **DAC (Digital-to-Analog Converter)** porque:
-- ✅ Calidad suficiente para beacons
-- ✅ Bajo consumo de energía
-- ✅ No requiere componentes externos
-- ✅ Fácil de implementar
+- Calidad suficiente para beacons
+- Bajo consumo de energía
+- No requiere componentes externos
+- Fácil de implementar
 
 ## Hardware de Audio
 
@@ -42,8 +42,8 @@ El ESP32 tiene **2 canales DAC** de 8 bits:
 
 | Pin | DAC | Función |
 |-----|-----|---------|
-| GPIO25 | DAC1 | ✅ **Usado para audio** |
-| GPIO26 | DAC2 | ⭕ Disponible para stereo |
+| GPIO25 | DAC1 | **Usado para audio** |
+| GPIO26 | DAC2 | Disponible para stereo |
 
 <Callout type="warn">
 **Importante**: Los DAC solo funcionan con **GPIO25 y GPIO26**. No puedes usar otros pines para salida analógica directa.
