@@ -1,4 +1,4 @@
-import { RootProvider } from 'fumadocs-ui/provider/next'; 
+import { RootProvider } from 'fumadocs-ui/provider/next';
 import './global.css';
 import { Inter } from 'next/font/google';
 import type { Metadata } from "next";
@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   description: 'Sistema de Orientación Audible Inalámbrico para el Entrenamiento de Fútbol Adaptado.',
   metadataBase: new URL('https://gitaf.pro'),
   icons: {
-    icon: '/icon.svg',
+    icon: [
+      { url: '/favicon.ico', sizes: '256x256' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-icon.png',
   },
 };
 
