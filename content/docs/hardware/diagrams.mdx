@@ -1,341 +1,133 @@
 ---
 title: Diagramas de Conexión
-description: Esquemas eléctricos y diagramas de conexión del hardware GITAF
+description: Esquemas eléctricos detallados y pinout para el ensamblaje de los nodos GITAF PRO
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-## Diagrama General del Sistema
+## Arquitectura de Hardware Unificada
+
+El sistema GITAF PRO utiliza un diseño de hardware estandarizado. Tanto el **Maestro** como los **Esclavos** comparten el mismo circuito electrónico. La diferenciación se realiza únicamente a través del software.
+
+### Diagrama de Bloques Funcional
 
 ```mermaid
-graph TB
-    subgraph "Módulo Maestro"
-        M[ESP32 Maestro]
-        PB[Powerbank 10000mAh]
-        PB -->|5V USB| M
+graph TD
+    subgraph "Etapa de Potencia"
+    Bat[Batería LiPo 2S (7.4V)] --> Switch[Interruptor]
+    Switch --> INA[Sensor INA219]
+    INA --> Reg[Regulador LM2596]
+    Reg -->|5.0V Regulado| Bus5V[Bus de Energía 5V]
     end
-    
-    subgraph "Poste Izquierdo"
-        E1[ESP32 Esclavo 1]
-        A1[Altavoz PAM8403]
-        B1[Batería 3.7V]
-        C1[TP4056]
-        B1 --> E1
-        B1 --> C1
-        E1 -->|PWM| A1
-    end
-    
-    subgraph "Poste Central"
-        E2[ESP32 Esclavo 2]
-        A2[Altavoz PAM8403]
-        B2[Batería 3.7V]
-        C2[TP4056]
-        B2 --> E2
-        B2 --> C2
-        E2 -->|PWM| A2
-    end
-    
-    subgraph "Poste Derecho"
-        E3[ESP32 Esclavo 3]
-        A3[Altavoz PAM8403]
-        B3[Batería 3.7V]
-        C3[TP4056]
-        B3 --> E3
-        B3 --> C3
-        E3 -->|PWM| A3
-    end
-    
-    M -.->|ESP-NOW| E1
-    M -.->|ESP-NOW| E2
-    M -.->|ESP-NOW| E3
-    
-    style M fill:#4CAF50
-    style E1 fill:#2196F3
-    style E2 fill:#2196F3
-    style E3 fill:#2196F3
-```
 
-## Módulo Maestro - Diagrama de Conexión
+    subgraph "Etapa de Control"
+    Bus5V --> ESP[ESP32 VIN]
+    ESP <-->|I2C: 21/22| INA
+    ESP -->|GPIO: 25/26/27| LED[LED RGB]
+    end
 
-### Conexión Básica
+    subgraph "Etapa de Audio"
+    Bus5V --> AMP[Amplificador PAM8403]
+    Bus5V --> MP3[DFPlayer Mini]
+    ESP -->|UART: 4/5| MP3
+    MP3 -->|Audio L/R| AMP
+    Cap[Capacitor 1000uF] -.->|Filtro| AMP
+    AMP --> Spk[Parlante 5W]
+    end
 
 ```
-┌─────────────────────┐
-│   ESP32 DevKit V1   │
-│                     │
-│  ┌──────────────┐   │
-│  │   USB Port   │───────→ Cable USB Micro-B
-│  └──────────────┘   │         │
-│                     │         │
-│  [PIN Layout]       │         ↓
-│  3V3  GND  EN  ...  │    ┌────────────┐
-│  ...  ...  ... ...  │    │ Powerbank  │
-└─────────────────────┘    │ 10000mAh   │
-                           │  5V / 2A   │
-                           └────────────┘
-```
 
-<Callout type="info">
-El módulo maestro no requiere conexiones adicionales. Todo se maneja por USB: alimentación, programación y datos.
+## Guía de Conexión Paso a Paso
+
+### 1. Sistema de Energía (Power Management)
+
+Esta es la etapa más crítica. Una mala conexión aquí puede quemar los componentes.
+
+| Origen | Destino | Cable | Notas |
+| --- | --- | --- | --- |
+| **Batería (+)** | **INA219 (Vin+)** | Rojo (Grueso) | Entrada directa de batería |
+| **Batería (-)** | **INA219 (GND)** | Negro (Grueso) | Tierra común |
+| **INA219 (Vin-)** | **LM2596 (IN+)** | Rojo | Salida del sensor al regulador |
+| **GND Común** | **LM2596 (IN-)** | Negro | Tierra común |
+| **LM2596 (OUT+)** | **BUS 5V (+)** | Rojo | **¡AJUSTAR A 5V ANTES DE CONECTAR!** |
+| **LM2596 (OUT-)** | **BUS 5V (-)** | Negro | Tierra común del sistema |
+
+<Callout type="danger" title="¡Calibración Obligatoria!">
+El módulo LM2596 suele venir de fábrica con el voltaje alto. Antes de conectar el ESP32 o el Audio, usa un multímetro y gira el tornillo dorado del LM2596 hasta que la salida marque exactamente **5.0V**.
 </Callout>
 
-### Pines Utilizados (Maestro)
+### 2. Conexión del Cerebro (ESP32)
 
-| Pin | Función | Descripción |
-|-----|---------|-------------|
-| 5V (USB) | Alimentación | Entrada de powerbank |
-| GND | Tierra | Referencia común |
-| GPIO2 | LED Indicador | LED integrado (interno) |
-| TX/RX | UART | Para debugging serial (opcional) |
+Alimentación y periféricos básicos.
 
-## Módulo Esclavo - Diagrama Detallado
+| Pin ESP32 | Conexión | Función |
+| --- | --- | --- |
+| **VIN** | BUS 5V (+) | Entrada de energía principal |
+| **GND** | BUS 5V (-) | Tierra |
+| **GPIO 21** | INA219 (SDA) | Datos I2C (Sensor Batería) |
+| **GPIO 22** | INA219 (SCL) | Reloj I2C (Sensor Batería) |
+| **GPIO 25** | LED RGB (Rojo) | Indicador Estado |
+| **GPIO 26** | LED RGB (Verde) | Indicador Estado |
+| **GPIO 27** | LED RGB (Azul) | Indicador Estado |
 
-### Esquema Completo de un Poste
+### 3. Módulo de Audio (DFPlayer + PAM8403)
 
-```
-                    ┌──────── Interruptor ON/OFF ────────┐
-                    │                                    │
-                    │                                    │
-┌───────────────────┴────────┐         ┌────────────────┴───┐
-│   Batería Li-Po 3.7V       │         │  Módulo TP4056     │
-│   2000 mAh                 │         │  (Cargador)        │
-│                            │         │                    │
-│   [+]────────────────────┐ │         │  IN+ ←─ 5V USB    │
-│   [-]───────┐            │ │         │  IN- ←─ GND USB   │
-└─────────────│────────────│─┘         │                    │
-              │            │           │  BAT+ ──→ Batería+│
-              │            │           │  BAT- ──→ Batería-│
-              │            │           └────────────────────┘
-              │ GND        │ VCC (3.7-4.2V)
-              │            │
-              │            │
-        ┌─────┴────────────┴───────┐
-        │   ESP32 DevKit V1        │
-        │                          │
-        │  VIN ←─────── VCC        │
-        │  GND ←─────── GND        │
-        │                          │
-        │  GPIO25 ──→ PWM Signal   │────────┐
-        │  3V3 ───→ Amplifier VCC  │        │
-        │  GND ───→ Amplifier GND  │        │
-        └──────────────────────────┘        │
-                                            │
-                     ┌──────────────────────┘
-                     │
-        ┌────────────┴─────────────┐
-        │  Amplificador PAM8403    │
-        │                          │
-        │  VCC ←── 3V3 (ESP32)    │
-        │  GND ←── GND            │
-        │  IN+ ←── GPIO25 (PWM)   │
-        │  IN- ←── GND            │
-        │                          │
-        │  OUT+ ─────────┐        │
-        │  OUT- ─────────│─────→  │
-        └────────────────│────────┘
-                         │
-                    ┌────┴────┐
-                    │ Speaker │
-                    │   4Ω    │
-                    │   3W    │
-                    └─────────┘
-```
+Configuración para eliminar ruido ("Soplido").
 
-### Tabla de Conexiones (Módulo Esclavo)
+| Pin Origen | Pin Destino | Componente Intermedio |
+| --- | --- | --- |
+| **ESP32 (GPIO 4)** | DFPlayer (RX) | - |
+| **ESP32 (GPIO 5)** | DFPlayer (TX) | Resistencia 1kΩ (Recomendado) |
+| **BUS 5V (+)** | DFPlayer (VCC) | - |
+| **GND** | DFPlayer (GND) | - |
+| **DFPlayer (DAC_R)** | PAM8403 (L_IN) | - |
+| **DFPlayer (DAC_L)** | PAM8403 (R_IN) | - |
+| **GND** | PAM8403 (GND Audio) | - |
+| **BUS 5V (+)** | PAM8403 (VCC) | **Capacitor 1000uF (Filtro)** |
 
-#### Batería → TP4056
+## Diagrama Esquemático (Pinout Map)
 
-| Batería | TP4056 Pin |
-|---------|-----------|
-| Positivo (+) | BAT+ |
-| Negativo (-) | BAT- |
+Visualización de las conexiones en la placa ESP32 (Vista Superior).
 
-#### TP4056 → ESP32
-
-| TP4056 | ESP32 Pin | Notas |
-|--------|-----------|-------|
-| OUT+ | VIN | Salida regulada de batería |
-| OUT- | GND | Tierra común |
-
-<Callout type="warn">
-**Importante**: El TP4056 proporciona protección de batería. Si conectas la batería directamente al ESP32 sin protección, podrías dañarla por sobre-descarga.
-</Callout>
-
-#### ESP32 → Amplificador PAM8403
-
-| ESP32 Pin | PAM8403 Pin | Descripción |
-|-----------|-------------|-------------|
-| 3V3 | VCC | Alimentación del amplificador |
-| GND | GND | Tierra común |
-| GPIO25 | IN+ (Left) | Señal PWM de audio |
-| GND | IN- (Left) | Referencia para canal izquierdo |
-
-#### Amplificador → Altavoz
-
-| PAM8403 | Altavoz | Cable |
-|---------|---------|-------|
-| OUT+ | Terminal + | Rojo |
-| OUT- | Terminal - | Negro |
-
-## Diagrama Fritzing - Vista de Montaje
-
-### Módulo Esclavo (Vista Breadboard)
+```text
+                  ┌─────────────────────────┐
+                  │      ESP32 DEVKIT V1    │
+                  └────────────┬────────────┘
+        [Energía]              │
+  (Bus 5V+) ──── VIN  [30] ┌───┴───┐ [1]  3V3 ── (No usado)
+      (GND) ──── GND  [29] │       │ [2]  EN
+  (INA SDA) ──── D13  [28] │       │ [3]  VP
+  (INA SCL) ──── D12  [27] │       │ [4]  VN
+ (LED Azul) ──── D27  [26] │       │ [5]  D34
+(LED Verde) ──── D26  [25] │       │ [6]  D35
+ (LED Rojo) ──── D25  [24] │       │ [7]  D32
+                D33  [23] │       │ [8]  D33
+                D32  [22] │       │ [9]  D25
+                D35  [21] │       │ [10] D26
+                D34  [20] │       │ [11] D27
+                 VN  [19] │       │ [12] D14
+                 VP  [18] │       │ [13] D12
+                 EN  [17] │       │ [14] D13 
+                      ...              ...
+         (MP3 RX) ──── D5   [X] │       │ [Y]  D4 ──── (MP3 TX)
+                  └─────────────────────────┘
 
 ```
-         [Interruptor]
-              │
-         ─────┴─────
-        │           │
-    [Batería]   [TP4056]
-    3.7V 2Ah        │
-        │       [USB Micro]
-        │           │
-        └─────┬─────┘
-              │
-        ┌─────┴─────┐
-        │  ESP32    │
-        │           │
-        │  [GPIO25]─┼──→ [PAM8403] ──→ [Speaker]
-        │           │         │             4Ω
-        │   [3V3]───┼──→ VCC  │
-        │   [GND]───┼──→ GND  │
-        └───────────┘
-```
 
-## Consideraciones de Cableado
+## Checklist de Verificación de Montaje
 
-### Longitud de Cables
+Antes de cerrar la caja y encender, verifica los siguientes puntos críticos:
 
-| Conexión | Longitud Recomendada | Calibre |
-|----------|----------------------|---------|
-| Batería ↔ TP4056 | 10-15 cm | 22 AWG |
-| TP4056 ↔ ESP32 | 15-20 cm | 22 AWG |
-| ESP32 ↔ PAM8403 | 10-15 cm | 24 AWG |
-| PAM8403 ↔ Speaker | 20-30 cm | 20 AWG |
+1. **Polaridad del Capacitor:** La franja blanca/negra del capacitor de 1000uF debe estar conectada estrictamente a **GND**.
+2. **Dirección del INA219:** Asegúrate de que `Vin+` venga de la batería y `Vin-` vaya hacia el circuito. Si lo pones al revés, leerá carga negativa.
+3. **Aislamiento:** Verifica que la parte trasera del DFPlayer o del ESP32 no esté tocando metal o soldaduras de otros componentes.
+4. **Voltaje:** Mide nuevamente el Bus de 5V. Si pasa de 5.5V, podrías dañar el PAM8403 o el DFPlayer.
 
-<Callout type="info">
-**Cables más cortos = Menos resistencia = Mejor eficiencia**
+## Solución de Problemas Comunes en Hardware
 
-Mantén las conexiones lo más cortas posible, especialmente entre la batería y el ESP32.
-</Callout>
-
-### Colores Estándar
-
-| Color | Uso |
-|-------|-----|
-| 🔴 Rojo | VCC / Positivo (+) |
-| ⚫ Negro | GND / Negativo (-) |
-| 🟡 Amarillo | Señal / PWM |
-| 🟢 Verde | GPIO / Control |
-| 🔵 Azul | Comunicación |
-
-## Pinout Detallado ESP32 DevKit V1
-
-```
-                        ┌─────────┐
-                        │   USB   │
-                        └────┬────┘
-   ┌────────────────────────┴────────────────────────┐
-   │                                                  │
-EN │○                                              ○│ 3V3
-36 │○                                              ○│ GND
-39 │○                                              ○│ 15
-34 │○              ESP32                           ○│ 2
-35 │○            DevKit V1                         ○│ 4
-32 │○                                              ○│ 16
-33 │○                                              ○│ 17
-25 │○ ← (PWM Audio)                                ○│ 5
-26 │○                                              ○│ 18
-27 │○                                              ○│ 19
-14 │○                                              ○│ 21
-12 │○                                              ○│ 22
-   │                                                  │
-GND│○                                              ○│ TX
-13 │○                                              ○│ RX
-9  │○                                              ○│ 23
-10 │○                                              ○│ VIN
-11 │○                                              ○│ GND
-   └──────────────────────────────────────────────┘
-```
-
-### Pines Específicos Usados
-
-| Pin | Nombre | Función en GITAF | ADC/PWM |
-|-----|--------|------------------|---------|
-| GPIO25 | OUT | Señal PWM para audio | DAC2 ✓ |
-| GPIO2 | LED | LED de estado (interno) | PWM ✓ |
-| GPIO34 | IN | Monitoreo batería (opcional) | ADC1_6 ✓ |
-| VIN | PWR | Entrada 5V desde USB/TP4056 | - |
-| 3V3 | PWR | Salida regulada 3.3V | - |
-| GND | PWR | Tierra común | - |
-
-<Callout type="warn">
-**Pines solo de entrada**: GPIO34, GPIO35, GPIO36, GPIO39 **no** tienen pull-up/pull-down interno y solo pueden usarse como entrada. No conectes LEDs o salidas a estos pines.
-</Callout>
-
-## Testing y Verificación
-
-### Checklist Pre-Encendido
-
-Antes de encender por primera vez, verifica:
-
-- [ ] Polaridad correcta de batería (+/- no invertidos)
-- [ ] No hay cortocircuitos entre VCC y GND
-- [ ] Todas las soldaduras están aisladas
-- [ ] Interruptor en posición OFF
-- [ ] TP4056 está correctamente conectado
-- [ ] Altavoz tiene la impedancia correcta (4Ω)
-- [ ] Cables no están pellizcados o dañados
-
-### Mediciones con Multímetro
-
-| Punto de Prueba | Valor Esperado | Notas |
-|----------------|----------------|-------|
-| Batería sin carga | 3.7V - 4.2V | 4.2V = completamente cargada |
-| Salida TP4056 | 3.7V - 4.2V | Igual que batería |
-| ESP32 VIN | 3.7V - 4.2V | Desde TP4056 |
-| ESP32 3V3 | 3.28V - 3.35V | Regulado interno |
-| Continuidad GND | 0Ω | Todos los GND conectados |
-
-## Montaje en Cajas
-
-### Distribución Interna Recomendada
-
-```
-┌─────────────────────────────────┐
-│  Tapa Superior                  │
-│  [○ LED Estado] [○ Interruptor] │
-├─────────────────────────────────┤
-│                                 │
-│  [ESP32]     [TP4056]          │
-│                                 │
-│  [PAM8403]   [Batería]         │
-│                                 │
-│  [Altavoz en panel lateral →]  │
-│                                 │
-├─────────────────────────────────┤
-│  Base con velcro para montaje   │
-└─────────────────────────────────┘
-```
-
-### Tips de Montaje
-
-1. **Fijación**: Usa velcro adhesivo de doble cara
-2. **Separación**: Mantén 1cm entre batería y ESP32 (ventilación)
-3. **Acceso**: Mantén accesibles:
-   - Puerto USB del TP4056 (para carga)
-   - Botón de reset del ESP32
-   - Interruptor de encendido
-4. **Protección**: Aísla todas las soldaduras con termo encogible
-
-## Recursos Adicionales
-
-- [Datasheet ESP32](https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf)
-- [PAM8403 Datasheet](https://www.diodes.com/assets/Datasheets/PAM8403.pdf)
-- [TP4056 Manual](https://dlnmh9ip6v2uc.cloudfront.net/datasheets/Prototyping/TP4056.pdf)
-
-## Próximos Pasos
-
-- Configuración del [Entorno de Desarrollo](/docs/firmware/setup)
-- Aprende sobre [Gestión de Energía](/docs/hardware/power)
-- Resuelve problemas con [Troubleshooting](/docs/support/troubleshooting)
+| Síntoma | Causa Probable | Solución |
+| --- | --- | --- |
+| **Ruido fuerte (Zumbido)** | Falta de Tierra Común o Capacitor | Soldar el capacitor de 1000uF directamente en los pines de alimentación del PAM8403. |
+| **El LED parpadea rojo** | INA219 desconectado | Revisar cables SDA/SCL (GPIO 21 y 22). |
+| **Audio suena distorsionado** | Batería baja o Volumen alto | Cargar batería o bajar volumen en el código (default 25). |
+| **No enciende** | LM2596 mal calibrado | Girar tornillo del regulador en sentido anti-horario muchas vueltas. |

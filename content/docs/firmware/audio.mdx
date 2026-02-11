@@ -1,593 +1,151 @@
 ---
 title: Lógica de Audio
-description: Generación y control de señales de audio para orientación
+description: Generación, control y secuenciación de señales acústicas en GITAF PRO
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-## Generación de Audio en ESP32
+## Arquitectura de Generación de Sonido
 
-El ESP32 puede generar señales de audio de múltiples formas:
+A diferencia de sistemas básicos que utilizan tonos sintéticos (beep/buzzer), GITAF PRO implementa una arquitectura de **Audio de Alta Fidelidad** basada en reproducción de muestras MP3 pregrabadas.
 
-| Método | Calidad | CPU Usage | Complejidad | Uso en GITAF |
-|--------|---------|-----------|-------------|--------------|
-| **PWM** | Baja | Muy bajo | Simple | No usado |
-| **DAC** | Media | Bajo | Media | **Usado** |
-| **I2S** | Alta | Medio | Alta | Futuro |
-| **DFPlayer** | Muy Alta | Ninguno | Baja | Opcional |
+### ¿Por qué DFPlayer Mini y no el DAC interno?
 
-Para GITAF usamos **DAC (Digital-to-Analog Converter)** porque:
-- Calidad suficiente para beacons
-- Bajo consumo de energía
-- No requiere componentes externos
-- Fácil de implementar
+El ESP32 posee un conversor Digital-Analógico (DAC) interno, pero para este proyecto optamos por un módulo dedicado **DFPlayer Mini** por tres razones críticas:
 
-## Hardware de Audio
+1.  **Calidad Psicoacústica:** Permite reproducir sonidos diseñados específicamente para ser localizados por el oído humano (Ruido Rosa, pulsos cortos) en lugar de ondas senoidales puras que pueden ser confusas.
+2.  **Desacople de CPU:** La decodificación del MP3 la hace el chip del módulo, liberando al procesador del ESP32 para mantener la conexión WiFi/ESP-NOW estable.
+3.  **Almacenamiento:** Permite cambiar los sonidos simplemente reemplazando archivos en la MicroSD, sin reprogramar el chip.
 
-### Conexión con Amplificador PAM8403
+## Cadena de Señal (Signal Chain)
+
+El flujo de audio sigue un recorrido diseñado para maximizar la potencia y minimizar el ruido eléctrico.
+
+```mermaid
+graph LR
+    ESP[ESP32] -->|UART: 9600 baud| MP3[DFPlayer Mini]
+    MP3 -->|DAC_R / DAC_L| Filter[Filtro Pasivo]
+    Filter -->|Señal Limpia| AMP[Amplificador PAM8403]
+    AMP -->|Potencia 5W| SPK[Parlante]
 
 ```
-ESP32 GPIO25 (DAC2) ──→ PAM8403 IN+
-ESP32 GND            ──→ PAM8403 IN-
-ESP32 3.3V          ──→ PAM8403 VCC
-ESP32 GND           ──→ PAM8403 GND
 
-PAM8403 OUT+ ───┐
-PAM8403 OUT- ───┴──→ [Altavoz 4Ω]
-```
+### Filtrado de Hardware
 
-### Pines DAC del ESP32
+Para eliminar el "zumbido" digital característico de la transmisión WiFi, implementamos un filtro físico entre el módulo MP3 y el amplificador:
 
-El ESP32 tiene **2 canales DAC** de 8 bits:
+* **Resistencia 1kΩ (Serie):** Reduce la ganancia de entrada para evitar saturación.
+* **Capacitor 1000uF (Paralelo a Fuente):** Absorbe los picos de consumo del amplificador.
 
-| Pin | DAC | Función |
-|-----|-----|---------|
-| GPIO25 | DAC1 | **Usado para audio** |
-| GPIO26 | DAC2 | Disponible para stereo |
+## Lógica del Secuenciador (Firmware)
 
-<Callout type="warn">
-**Importante**: Los DAC solo funcionan con **GPIO25 y GPIO26**. No puedes usar otros pines para salida analógica directa.
-</Callout>
+El corazón de la orientación no es solo "reproducir sonido", sino **cómo** se reproduce. El firmware implementa una **Máquina de Estados Finita** para controlar la secuencia.
 
-## Implementación Básica
+### El Algoritmo de "3 Repeticiones"
 
-### 1. Configuración Inicial
+Para evitar la contaminación acústica en la cancha, el sistema no suena continuamente. Sigue este patrón estricto:
+
+1. **Trigger:** Recibe comando `'1'` (Start).
+2. **Bucle Activo:**
+* Reproduce Pista 001.
+* *Espera 3 Segundos.*
+* Reproduce Pista 001.
+* *Espera 3 Segundos.*
+* Reproduce Pista 001.
+
+
+3. **Auto-Stop:** Detiene el audio y entra en bajo consumo.
+
+### Implementación en Código
 
 ```cpp
-#define AUDIO_PIN 25          // GPIO25 (DAC1)
-#define SAMPLE_RATE 8000      // 8 kHz es suficiente para beacon
-#define FREQUENCY 2000        // Frecuencia del tono (Hz)
-#define VOLUME 200            // Volumen 0-255
+// Fragmento real del firmware GITAF PRO
 
-void setupAudio() {
-  // No requiere pinMode() para DAC
-  // El DAC está siempre disponible en GPIO25/26
-  
-  Serial.println("Audio configurado en GPIO25");
-}
-```
+const int MAX_PLAYS = 3;        // Límite de repeticiones
+const int PLAY_INTERVAL = 3000; // Silencio entre audios (ms)
 
-### 2. Generar Tono Simple
+void audioLoop() {
+  if (sequenceActive) {
+      unsigned long currentMillis = millis();
 
-```cpp
-void playTone(uint16_t frequency, uint16_t duration) {
-  unsigned long startTime = millis();
-  
-  while (millis() - startTime < duration) {
-    // Calcular valor de onda sinusoidal
-    float time = millis() / 1000.0;
-    float value = 128 + 127 * sin(2 * PI * frequency * time);
-    
-    // Aplicar volumen
-    value = (value * VOLUME) / 255;
-    
-    // Escribir a DAC (0-255)
-    dacWrite(AUDIO_PIN, (uint8_t)value);
-    
-    delayMicroseconds(125);  // ~8 kHz sample rate
+      // Verifica si es momento de sonar (Non-blocking delay)
+      if (currentMillis - lastPlayTime >= PLAY_INTERVAL || lastPlayTime == 0) {
+          
+          if (playCount < MAX_PLAYS) {
+              // --- ACCIÓN DE REPRODUCCIÓN ---
+              myDFPlayer.play(1); 
+              Serial.println("Reproduciendo Beacon...");
+              
+              playCount++;
+              lastPlayTime = currentMillis; 
+          } else {
+              // --- FINALIZACIÓN ---
+              sequenceActive = false;
+              playCount = 0;
+              // El sistema queda en silencio automáticamente
+          }
+      }
   }
-  
-  // Silencio al terminar
-  dacWrite(AUDIO_PIN, 128);  // Punto medio = silencio
 }
+
 ```
 
 <Callout type="info">
-El valor 128 representa el **punto medio** de la onda. Es importante volver a este valor al terminar para evitar "pops" o chasquidos.
+Este enfoque "no bloqueante" (usando `millis()` en lugar de `delay()`) es fundamental. Permite que el ESP32 siga escuchando comandos de "STOP" de emergencia incluso mientras espera entre sonidos.
 </Callout>
 
-### 3. Tabla de Lookup para Mayor Eficiencia
+## Gestión de Archivos en Tarjeta SD
 
-Calcular `sin()` en cada muestra consume CPU. Mejor usar una tabla precalculada:
+El módulo DFPlayer Mini requiere una estructura de archivos muy específica para funcionar correctamente.
 
-```cpp
-#define TABLE_SIZE 256
+### Estructura de Carpetas
 
-uint8_t sineTable[TABLE_SIZE];
+La tarjeta MicroSD (formateada en **FAT32**) debe tener la siguiente jerarquía:
 
-void generateSineTable() {
-  for (int i = 0; i < TABLE_SIZE; i++) {
-    float angle = (2 * PI * i) / TABLE_SIZE;
-    sineTable[i] = (uint8_t)(128 + 127 * sin(angle));
-  }
-  Serial.println("Tabla sinusoidal generada");
-}
+```text
+(Raíz de la SD)
+│
+└── mp3/             <-- Carpeta obligatoria llamada "mp3"
+    │
+    ├── 0001.mp3     <-- Sonido principal (Beacon)
+    ├── 0002.mp3     <-- (Opcional) Sonido de batería baja
+    └── 0003.mp3     <-- (Opcional) Sonido de confirmación
 
-void playToneOptimized(uint16_t frequency, uint16_t duration) {
-  unsigned long samples = (SAMPLE_RATE * duration) / 1000;
-  float phaseIncrement = (TABLE_SIZE * frequency) / (float)SAMPLE_RATE;
-  float phase = 0;
-  
-  for (unsigned long i = 0; i < samples; i++) {
-    // Lookup en tabla
-    uint8_t value = sineTable[(int)phase % TABLE_SIZE];
-    
-    // Aplicar volumen
-    value = (value * VOLUME) / 255;
-    
-    dacWrite(AUDIO_PIN, value);
-    
-    phase += phaseIncrement;
-    if (phase >= TABLE_SIZE) phase -= TABLE_SIZE;
-    
-    delayMicroseconds(125);  // 8 kHz
-  }
-  
-  dacWrite(AUDIO_PIN, 128);
-}
 ```
 
-## Patrones de Audio Avanzados
+### Reglas de Nombrado
 
-### Beacon Pulsante
+* Los archivos **DEBEN** empezar con 4 dígitos numéricos: `0001`, `0002`, etc.
+* Puedes añadir texto después de los números, ej: `0001_Sonido_Gol.mp3`, pero los números son lo único que lee el chip.
+* En el código, llamamos al archivo con `myDFPlayer.play(1);` para el `0001.mp3`.
 
-Un tono que se enciende y apaga facilita la localización:
+## Control de Volumen y Ganancia
 
-```cpp
-void playPulsingBeacon(uint16_t freq, uint16_t totalDuration) {
-  const uint16_t pulseOn = 500;   // 500ms ON
-  const uint16_t pulseOff = 200;  // 200ms OFF
-  
-  unsigned long startTime = millis();
-  
-  while (millis() - startTime < totalDuration) {
-    // Pulso ON
-    playToneOptimized(freq, pulseOn);
-    
-    // Pulso OFF (silencio)
-    delay(pulseOff);
-  }
-}
-```
+El sistema tiene dos etapas de control de volumen:
 
-### Sweep (Barrido de Frecuencia)
+1. **Digital (Software):**
+Controlado por el comando `myDFPlayer.volume(25);`.
+* Rango: 0 a 30.
+* Valor óptimo GITAF: **25** (Valores superiores a 28 suelen introducir distorsión).
 
-Un tono que cambia de frecuencia ayuda a identificar diferentes postes:
 
-```cpp
-void playSweep(uint16_t freqStart, uint16_t freqEnd, uint16_t duration) {
-  float freqIncrement = (freqEnd - freqStart) / (float)duration;
-  float currentFreq = freqStart;
-  
-  unsigned long startTime = millis();
-  unsigned long lastUpdate = startTime;
-  
-  while (millis() - startTime < duration) {
-    // Actualizar frecuencia cada 10ms
-    if (millis() - lastUpdate >= 10) {
-      currentFreq += freqIncrement * 10;
-      lastUpdate = millis();
-    }
-    
-    // Generar muestra
-    float time = millis() / 1000.0;
-    float value = 128 + 127 * sin(2 * PI * currentFreq * time);
-    value = (value * VOLUME) / 255;
-    
-    dacWrite(AUDIO_PIN, (uint8_t)value);
-    delayMicroseconds(125);
-  }
-  
-  dacWrite(AUDIO_PIN, 128);
-}
-```
+2. **Analógico (Hardware):**
+El amplificador PAM8403 suele incluir un pequeño potenciómetro.
+* **Recomendación:** Dejar el potenciómetro físico al máximo y controlar el volumen final solo desde el código para asegurar que todos los postes suenen igual.
 
-### Diferentes Tonos por Poste
 
-```cpp
-// Frecuencias características para cada poste
-#define FREQ_LEFT   1800  // Hz - Tono más grave
-#define FREQ_CENTER 2000  // Hz - Tono medio
-#define FREQ_RIGHT  2200  // Hz - Tono más agudo
 
-void playBeaconForPost(uint8_t postID, uint16_t duration) {
-  uint16_t frequency;
-  
-  switch(postID) {
-    case DEVICE_LEFT:
-      frequency = FREQ_LEFT;
-      break;
-    case DEVICE_CENTER:
-      frequency = FREQ_CENTER;
-      break;
-    case DEVICE_RIGHT:
-      frequency = FREQ_RIGHT;
-      break;
-    default:
-      return;
-  }
-  
-  playPulsingBeacon(frequency, duration);
-}
-```
+## Tipos de Sonido Recomendados
 
-<Callout type="info">
-Las frecuencias diferentes ayudan al jugador a identificar audiblemente qué poste está sonando, incluso sin ver.
+Para fútbol de ciegos, el tipo de audio es crucial para la ecolocalización.
+
+| Tipo de Audio | Descripción | Uso en GITAF |
+| --- | --- | --- |
+| **Ruido Rosa / Blanco** | Sonido estático tipo "lluvia". | **Recomendado.** Excelente para ubicación espacial. |
+| **Pulsos (Beeps)** | Tonos agudos intermitentes. | Útil, pero puede rebotar mucho en gimnasios cerrados (eco). |
+| **Voz Humana** | Grabación diciendo "Arco", "Aquí". | Intuitivo, pero menos preciso para calcular distancia. |
+| **Percusión** | Sonido de golpe seco (madera/metal). | Muy bueno para simular el sonido del balón o los postes. |
+
+<Callout type="tip">
+Para el archivo `0001.mp3`, recomendamos un sonido de percusión metálica breve (aprox 1 segundo) o una ráfaga corta de ruido rosa. Evita canciones o melodías largas.
 </Callout>
-
-## Control de Volumen
-
-### Volumen Dinámico
-
-```cpp
-class AudioController {
-private:
-  uint8_t currentVolume = 200;  // 0-255
-  uint8_t maxVolume = 255;
-  uint8_t minVolume = 50;
-  
-public:
-  void setVolume(uint8_t vol) {
-    currentVolume = constrain(vol, minVolume, maxVolume);
-  }
-  
-  void increaseVolume(uint8_t step = 20) {
-    currentVolume = min(currentVolume + step, maxVolume);
-  }
-  
-  void decreaseVolume(uint8_t step = 20) {
-    currentVolume = max(currentVolume - step, minVolume);
-  }
-  
-  uint8_t getVolume() {
-    return currentVolume;
-  }
-  
-  void applyVolume(uint8_t &sample) {
-    // Escalar muestra por volumen actual
-    sample = (sample * currentVolume) / 255;
-  }
-};
-
-AudioController audio;
-```
-
-### Fade In / Fade Out
-
-Suavizar el inicio/fin del audio para evitar chasquidos:
-
-```cpp
-void playToneWithFade(uint16_t freq, uint16_t duration) {
-  const uint16_t fadeTime = 50;  // 50ms de fade
-  unsigned long startTime = millis();
-  unsigned long elapsed;
-  
-  float phaseIncrement = (TABLE_SIZE * freq) / (float)SAMPLE_RATE;
-  float phase = 0;
-  
-  while ((elapsed = millis() - startTime) < duration) {
-    uint8_t value = sineTable[(int)phase % TABLE_SIZE];
-    
-    // Aplicar fade in
-    if (elapsed < fadeTime) {
-      float fadeMultiplier = elapsed / (float)fadeTime;
-      value = 128 + ((value - 128) * fadeMultiplier);
-    }
-    
-    // Aplicar fade out
-    if (elapsed > duration - fadeTime) {
-      float fadeMultiplier = (duration - elapsed) / (float)fadeTime;
-      value = 128 + ((value - 128) * fadeMultiplier);
-    }
-    
-    // Volumen
-    value = (value * VOLUME) / 255;
-    
-    dacWrite(AUDIO_PIN, value);
-    
-    phase += phaseIncrement;
-    if (phase >= TABLE_SIZE) phase -= TABLE_SIZE;
-    
-    delayMicroseconds(125);
-  }
-  
-  dacWrite(AUDIO_PIN, 128);
-}
-```
-
-## Gestión de Energía en Audio
-
-### Apagar Amplificador Cuando No se Usa
-
-```cpp
-#define AMP_ENABLE_PIN 4  // Pin para controlar amplificador
-
-void setupAmplifier() {
-  pinMode(AMP_ENABLE_PIN, OUTPUT);
-  digitalWrite(AMP_ENABLE_PIN, LOW);  // Apagado por defecto
-}
-
-void enableAmplifier() {
-  digitalWrite(AMP_ENABLE_PIN, HIGH);
-  delay(10);  // Esperar estabilización
-}
-
-void disableAmplifier() {
-  dacWrite(AUDIO_PIN, 128);  // Silencio primero
-  delay(5);
-  digitalWrite(AMP_ENABLE_PIN, LOW);
-}
-
-void playAudioEfficient(uint16_t freq, uint16_t duration) {
-  enableAmplifier();
-  playToneOptimized(freq, duration);
-  disableAmplifier();
-  
-  // Ahorra ~50mA cuando está apagado
-}
-```
-
-## Manager de Audio Completo
-
-```cpp
-class GitafAudioManager {
-private:
-  uint8_t audioPin;
-  uint8_t ampEnablePin;
-  uint8_t volume;
-  bool isPlaying;
-  uint8_t sineTable[TABLE_SIZE];
-  
-public:
-  GitafAudioManager(uint8_t pin, uint8_t ampPin) 
-    : audioPin(pin), ampEnablePin(ampPin), volume(200), isPlaying(false) {
-    generateSineTable();
-    setupPins();
-  }
-  
-  void setupPins() {
-    pinMode(ampEnablePin, OUTPUT);
-    digitalWrite(ampEnablePin, LOW);
-  }
-  
-  void generateSineTable() {
-    for (int i = 0; i < TABLE_SIZE; i++) {
-      float angle = (2 * PI * i) / TABLE_SIZE;
-      sineTable[i] = (uint8_t)(128 + 127 * sin(angle));
-    }
-  }
-  
-  void play(uint16_t frequency, uint16_t duration, uint8_t vol = 0) {
-    if (vol > 0) volume = vol;
-    
-    isPlaying = true;
-    enableAmplifier();
-    
-    // Generar audio
-    playToneInternal(frequency, duration);
-    
-    disableAmplifier();
-    isPlaying = false;
-  }
-  
-  void stop() {
-    isPlaying = false;
-    dacWrite(audioPin, 128);
-    disableAmplifier();
-  }
-  
-  void setVolume(uint8_t vol) {
-    volume = constrain(vol, 0, 255);
-  }
-  
-  bool getPlayingStatus() {
-    return isPlaying;
-  }
-  
-private:
-  void enableAmplifier() {
-    digitalWrite(ampEnablePin, HIGH);
-    delay(10);
-  }
-  
-  void disableAmplifier() {
-    dacWrite(audioPin, 128);
-    delay(5);
-    digitalWrite(ampEnablePin, LOW);
-  }
-  
-  void playToneInternal(uint16_t freq, uint16_t duration) {
-    unsigned long samples = (SAMPLE_RATE * duration) / 1000;
-    float phaseIncrement = (TABLE_SIZE * freq) / (float)SAMPLE_RATE;
-    float phase = 0;
-    
-    for (unsigned long i = 0; i < samples && isPlaying; i++) {
-      uint8_t value = sineTable[(int)phase % TABLE_SIZE];
-      value = (value * volume) / 255;
-      
-      dacWrite(audioPin, value);
-      
-      phase += phaseIncrement;
-      if (phase >= TABLE_SIZE) phase -= TABLE_SIZE;
-      
-      delayMicroseconds(125);
-    }
-    
-    dacWrite(audioPin, 128);
-  }
-};
-
-// Uso global
-GitafAudioManager audioManager(25, 4);
-```
-
-## Integración con ESP-NOW
-
-En el archivo principal del esclavo:
-
-```cpp
-#include "audio_manager.h"
-
-GitafAudioManager audioManager(AUDIO_PIN, AMP_ENABLE_PIN);
-
-void handleCommand(gitaf_message msg) {
-  switch(msg.command) {
-    case CMD_PLAY_AUDIO:
-      Serial.print("Reproduciendo audio: ");
-      Serial.print(msg.duration);
-      Serial.println(" ms");
-      
-      // Determinar frecuencia según ID del dispositivo
-      uint16_t freq = getFrequencyForDevice(MY_DEVICE_ID);
-      
-      audioManager.play(freq, msg.duration, msg.volume);
-      break;
-      
-    case CMD_STOP:
-      audioManager.stop();
-      break;
-  }
-}
-
-uint16_t getFrequencyForDevice(uint8_t deviceID) {
-  switch(deviceID) {
-    case DEVICE_LEFT: return FREQ_LEFT;
-    case DEVICE_CENTER: return FREQ_CENTER;
-    case DEVICE_RIGHT: return FREQ_RIGHT;
-    default: return FREQ_CENTER;
-  }
-}
-```
-
-## Testing de Audio
-
-### Generador de Prueba
-
-```cpp
-void testAudioSystem() {
-  Serial.println("\n=== Test de Audio ===");
-  
-  // Test 1: Tono simple
-  Serial.println("Test 1: Tono 2000Hz x 1s");
-  audioManager.play(2000, 1000);
-  delay(500);
-  
-  // Test 2: Tres tonos diferentes
-  Serial.println("Test 2: Tres tonos");
-  audioManager.play(1800, 500);  // Izquierdo
-  delay(300);
-  audioManager.play(2000, 500);  // Centro
-  delay(300);
-  audioManager.play(2200, 500);  // Derecho
-  delay(300);
-  
-  // Test 3: Volumen gradual
-  Serial.println("Test 3: Volumen gradual");
-  for (uint8_t vol = 50; vol <= 255; vol += 50) {
-    audioManager.setVolume(vol);
-    audioManager.play(2000, 300);
-    delay(200);
-  }
-  
-  Serial.println("Tests completados");
-}
-```
-
-### Analizador de Frecuencia (Con Osciloscopio)
-
-Si tienes acceso a un osciloscopio:
-
-```cpp
-void outputTestSignal() {
-  // Señal cuadrada en GPIO26 para trigger
-  pinMode(26, OUTPUT);
-  digitalWrite(26, HIGH);
-  
-  // Audio en GPIO25
-  audioManager.play(2000, 2000);
-  
-  digitalWrite(26, LOW);
-}
-```
-
-## Troubleshooting de Audio
-
-### Sin Sonido
-
-**Checklist**:
-- [ ] Verifica conexiones (especialmente GND común)
-- [ ] Comprueba que PAM8403 tiene alimentación (LED debe encender)
-- [ ] Mide voltaje en GPIO25 con multímetro (debe variar)
-- [ ] Prueba con audífonos directamente en DAC (con resistor de 100Ω en serie)
-- [ ] Verifica impedancia del altavoz (debe ser 4-8Ω)
-
-```cpp
-// Test de hardware simple
-void testDACoutput() {
-  Serial.println("Test DAC - deberías ver voltaje variable");
-  
-  for (int i = 0; i < 10; i++) {
-    dacWrite(25, 0);    // 0V
-    delay(500);
-    dacWrite(25, 255);  // 3.3V
-    delay(500);
-  }
-  
-  dacWrite(25, 128);  // 1.65V
-}
-```
-
-### Ruido o Distorsión
-
-**Causas comunes**:
-- Loops de tierra (múltiples GNDs)
-- Alimentación ruidosa
-- Cables muy largos sin blindaje
-
-**Soluciones**:
-```cpp
-// Agregar capacitor de desacople en código (filtro software)
-uint8_t lowPassFilter(uint8_t newSample, uint8_t oldSample) {
-  return (newSample * 0.7) + (oldSample * 0.3);
-}
-```
-
-### Consumo Excesivo
-
-```cpp
-// Verificar consumo
-void measureAudioPower() {
-  float batteryBefore = readBatteryVoltage();
-  
-  audioManager.play(2000, 10000);  // 10 segundos
-  
-  float batteryAfter = readBatteryVoltage();
-  float voltageDropped = batteryBefore - batteryAfter;
-  
-  Serial.print("Caída de voltaje: ");
-  Serial.print(voltageDropped * 1000);
-  Serial.println(" mV");
-}
-```
-
-## Próximos Pasos
-
-- Prueba el [firmware completo del esclavo](/docs/firmware/complete-slave)
-- Integra con la [App Android](/docs/mobile)
-- Consulta [Solución de Problemas](/docs/support/troubleshooting) si encuentras issues
-
-## Recursos
-
-- [ESP32 DAC Documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/dac.html)
-- [PAM8403 Datasheet](https://www.diodes.com/assets/Datasheets/PAM8403.pdf)
-- [Digital Signal Processing Basics](https://www.dsprelated.com/)

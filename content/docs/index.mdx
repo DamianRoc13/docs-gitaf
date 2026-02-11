@@ -1,26 +1,28 @@
 ---
-title: GITAF  
-description: Bienvenido a la documentación oficial de GITAF - Sistema de Entrenamiento Deportivo con ESP32
+title: GITAF PRO
+description: Documentación oficial de GITAF PRO - Sistema de Orientación Audible Inalámbrico para Fútbol Adaptado
 ---
 
 import { Card, Cards } from 'fumadocs-ui/components/card';
 
-## Sistema de Entrenamiento Deportivo
+## Sistema de Orientación Audible para Fútbol Adaptado
 
-**GITAF** es un sistema de entrenamiento inteligente basado en ESP32 que utiliza señales de audio para guiar atletas durante ejercicios de agilidad. La comunicación inalámbrica mediante ESP-NOW permite un control preciso y de baja latencia entre dispositivos.
+**GITAF PRO** es una solución tecnológica integral diseñada para brindar autonomía a los atletas con discapacidad visual. Mediante el uso de una red de nodos inteligentes basados en **ESP32**, el sistema emite señales acústicas precisas que permiten al deportista orientarse en el campo de juego y localizar las porterías sin intervención humana constante.
 
-##Documentación
+
+
+## Documentación General
 
 <Cards>
   <Card 
     title="Introducción" 
     href="/docs/introduction"
-    description="Visión general del sistema, objetivos y características principales"
+    description="Visión general del sistema, objetivos para ANVIZSUC y características principales."
   />
   <Card 
     title="Arquitectura del Sistema" 
     href="/docs/architecture"
-    description="Arquitectura técnica, protocolos de comunicación y flujos de datos"
+    description="Diseño técnico de la red estrella: Conectividad BLE y protocolo ESP-NOW."
   />
 </Cards>
 
@@ -28,89 +30,87 @@ import { Card, Cards } from 'fumadocs-ui/components/card';
 
 <Cards>
   <Card 
-    title="Componentes" 
+    title="Lista de Componentes (BOM)" 
     href="/docs/hardware/components"
-    description="Lista completa de componentes (BOM) y especificaciones técnicas"
+    description="Detalle de hardware: ESP32, DFPlayer Mini, PAM8403 y sensores INA219."
   />
   <Card 
     title="Diagramas de Conexión" 
     href="/docs/hardware/diagrams"
-    description="Esquemas de cableado, pinouts y diagramas del sistema completo"
+    description="Esquemas de cableado unificado, pinouts y soluciones al ruido eléctrico."
   />
   <Card 
     title="Gestión de Energía" 
     href="/docs/hardware/power"
-    description="Administración de baterías, consumo y optimización energética"
+    description="Monitoreo de baterías LiPo 2S (7.4V) y telemetría mediante INA219."
   />
 </Cards>
 
-### Firmware ESP32
+### Firmware y Lógica
 
 <Cards>
   <Card 
     title="Configuración del Entorno" 
     href="/docs/firmware/setup"
-    description="Instalación de Arduino IDE, PlatformIO y configuración inicial"
+    description="Instalación del Core ESP32 (v3.0+) y configuración de librerías necesarias."
   />
   <Card 
-    title="Comunicación ESP-NOW" 
+    title="Comunicación Inalámbrica" 
     href="/docs/firmware/communication"
-    description="Implementación de protocolo ESP-NOW para maestro y esclavos"
+    description="Implementación de mensajería binaria entre el Maestro y los Esclavos."
   />
   <Card 
     title="Lógica de Audio" 
     href="/docs/firmware/audio"
-    description="Generación de señales de audio mediante DAC y control de amplificadores"
+    description="Control del DFPlayer, secuenciador de 3 repeticiones y auto-apagado."
   />
 </Cards>
 
-### Aplicación Móvil
+### Interfaz y Control
 
 <Cards>
   <Card 
     title="Funcionalidad del Sistema" 
     href="/docs/functionality"
-    description="Diagrama funcional y descripción del flujo de trabajo"
+    description="Diagrama funcional de la lógica 'Disparar y Olvidar' del sistema."
   />
   <Card 
-    title="App Android" 
+    title="Aplicación Móvil" 
     href="/docs/mobile"
-    description="Interfaz de usuario, conexión Bluetooth y controles"
+    description="Guía de uso de la App Android, modo TalkBack y monitor de baterías."
   />
 </Cards>
 
-### Soporte
+### Soporte Técnico
 
 <Cards>
   <Card 
     title="Solución de Problemas" 
     href="/docs/support/troubleshooting"
-    description="Troubleshooting, FAQ y diagnóstico de problemas comunes"
+    description="Diagnóstico por colores de LED, solución al zumbido y FAQ."
   />
 </Cards>
 
 ---
 
-##Inicio Rápido
+## Ruta de Implementación Rápida
 
-1. **[Revisa la arquitectura](/docs/architecture)** para entender cómo funciona el sistema
-2. **[Consigue los componentes](/docs/hardware/components)** necesarios para construir GITAF
-3. **[Configura tu entorno](/docs/firmware/setup)** de desarrollo ESP32
-4. **[Implementa la comunicación](/docs/firmware/communication)** ESP-NOW
-5. **[Programa el audio](/docs/firmware/audio)** para los beacons
-6. **[Instala la app móvil](/docs/mobile)** para controlar el sistema
+1. **[Identificación](/docs/firmware/setup)**: Obtén las direcciones MAC de tus 3 placas ESP32.
+2. **[Ensamblaje](/docs/hardware/diagrams)**: Arma los circuitos utilizando el filtro anti-ruido de 1000uF.
+3. **[Firmware](/docs/firmware/communication)**: Carga el código correspondiente al Maestro y a los Esclavos.
+4. **[Preparación de Audio](/docs/firmware/audio)**: Configura la MicroSD con la carpeta `mp3` y los archivos `0001.mp3`.
+5. **[Control](/docs/mobile)**: Instala el APK en Android y conéctate al dispositivo "Gitaf Pro".
 
-## 🛠️ Tecnologías Utilizadas
+## Tecnologías Implementadas
 
-- **ESP32** - Microcontrolador con WiFi integrado
-- **ESP-NOW** - Protocolo de comunicación de baja latencia
-- **PAM8403** - Amplificador Clase D para audio
-- **Li-Po + TP4056** - Sistema de batería recargable
-- **React Native** - Framework para la aplicación móvil
-- **Bluetooth LE** - Comunicación entre app y dispositivo maestro
+- **ESP32 WROOM**: Microcontrolador dual-core para procesamiento simultáneo de red y audio.
+- **ESP-NOW**: Protocolo propietario de baja latencia para comunicación entre nodos en campo.
+- **BLE (Bluetooth Low Energy)**: Enlace de telemetría y mando con dispositivos móviles.
+- **INA219**: Medición digital de alta precisión para protección de baterías LiPo.
+- **PAM8403 + DFPlayer**: Sistema híbrido para reproducción de MP3 de alta potencia (5W).
 
 ---
 
 <div style={{textAlign: 'center', marginTop: '2rem'}}>
-  ¿Necesitas ayuda? Consulta la [sección de soporte](/docs/support/troubleshooting)
+  Documentación técnica para el proyecto final de grado. ¿Tienes dudas? Revisa el [Soporte](/docs/support/troubleshooting).
 </div>

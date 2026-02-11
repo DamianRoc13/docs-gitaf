@@ -1,775 +1,102 @@
 ---
 title: Solución de Problemas
-description: Troubleshooting y preguntas frecuentes del sistema GITAF
+description: Guía de diagnóstico y resolución de fallas comunes en GITAF PRO
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-## Problemas Comunes y Soluciones
+## Diagnóstico Rápido por LED
 
-### 🔌 Hardware y Conexiones
+El sistema cuenta con un código de colores (LED RGB) para informar su estado sin necesidad de conectar una computadora.
 
-#### ESP32 No Enciende
+| Color | Comportamiento | Significado | Acción Requerida |
+| :--- | :--- | :--- | :--- |
+| **🔵 Azul** | Fijo | **Bluetooth Conectado**. El Maestro tiene enlace con la App. | Sistema listo para operar. |
+| **🟢 Verde** | Fijo | **Standby (Batería OK)**. Nivel de carga > 50%. | Todo normal. |
+| **🟠 Naranja** | Fijo | **Batería Media**. Nivel de carga > 20%. | Planificar recarga al finalizar sesión. |
+| **🔴 Rojo** | Fijo | **Batería Crítica**. Nivel de carga < 20%. | **Recargar inmediatamente.** Riesgo de apagado. |
+| **🔴 Rojo** | Parpadeo Rápido | **Error de Hardware**. Fallo en INA219 o DFPlayer. | Revisar conexiones internas. |
+| **⚪ Blanco** | Flash (1 seg) | **Reinicio / Boot**. El sistema acaba de encenderse. | Esperar a que cambie de color. |
+| ⚫ **Apagado** | - | **Sin Energía** o **Deep Sleep**. | Verificar interruptor y batería. |
 
-**Síntomas**: LED del ESP32 no enciende, no responde al USB
+## Problemas de Audio
 
-**Diagnóstico**:
-```bash
-# Windows - Ver dispositivos USB
-Get-PnpDevice | Where-Object {$_.Status -eq "OK"}
+### Zumbido o "Soplido" constante en el parlante
+**Causa:** Ruido eléctrico de la transmisión WiFi entrando al amplificador.
+**Solución:**
+1.  Verificar que el **Capacitor de 1000uF** esté soldado lo más cerca posible de los pines de alimentación del módulo PAM8403.
+2.  Confirmar que la resistencia de **1kΩ** está instalada entre el pin TX del ESP32 y el RX del amplificador.
+3.  Trenzar los cables que van hacia el parlante.
 
-# Linux/macOS
-lsusb
-dmesg | grep tty
-```
+### El audio suena distorsionado o "roto"
+**Causa:** Falta de corriente o volumen digital excesivo.
+**Solución:**
+1.  La batería puede estar baja (< 7.0V). El amplificador no recibe suficiente potencia.
+2.  En el código, reducir el volumen del DFPlayer: `myDFPlayer.volume(20);` (El máximo es 30, pero satura).
 
-**Soluciones**:
+### El módulo MP3 no reproduce nada
+**Checklist:**
+- [ ] La tarjeta SD está formateada en **FAT32**.
+- [ ] Los archivos están dentro de una carpeta llamada `mp3`.
+- [ ] Los archivos se llaman `0001.mp3`, `0002.mp3` (4 dígitos).
+- [ ] El LED azul del propio módulo DFPlayer debería encenderse brevemente al intentar reproducir.
 
-<Callout type="warn">
-1. **Verificar alimentación**:
-   - Medir voltaje en pin VIN/5V (debe ser 4.5-5.5V)
-   - Probar con otro cable USB (muchos cables son solo de carga)
-   - Probar con otro puerto USB o adaptador de corriente
+## Problemas de Conectividad
+
+### La App no encuentra "Gitaf Pro"
+**Causa:** Caché de Bluetooth del celular o falta de permisos.
+**Solución:**
+1.  Apagar y encender el Bluetooth del celular.
+2.  En Android, ir a *Ajustes > Aplicaciones > GITAF App* y conceder permiso de **"Ubicación"** y **"Dispositivos Cercanos"**.
+3.  Reiniciar el ESP32 Maestro.
+
+### El Maestro no activa los Esclavos
+**Causa:** Direcciones MAC incorrectas o canal WiFi distinto.
+**Diagnóstico:**
+1.  Conectar el Maestro al PC y abrir el Monitor Serial.
+2.  Al enviar un comando desde la App, ¿aparece `Delivery Success` o `Delivery Fail`?
+    * **Fail:** El esclavo está apagado, lejos, o la MAC en el código `slave1MAC` no coincide con la real del esclavo.
+    * **Success:** El mensaje llega, pero el esclavo no suena (revisar sección de Audio).
+
+### Alcance corto (< 20 metros)
+**Causa:** Antena obstruida.
+**Solución:**
+* Asegurarse de que la antena PCB del ESP32 (el zig-zag dorado en el borde) no esté tapada por cables, baterías o cajas metálicas. Debe "ver" hacia el exterior.
+* Elevar los postes al menos a 1 metro del suelo (el suelo absorbe la señal).
+
+## Problemas de Energía (Batería 2S)
+
+### El sistema se apaga al subir el volumen
+**Causa:** La batería no soporta el pico de corriente (Amperaje).
+**Solución:**
+* Usar baterías LiPo de alta descarga (20C o más), como las de drones. Baterías de litio genéricas (tipo 18650 recicladas) pueden no tener fuerza suficiente.
+
+### El porcentaje de batería no baja del 100% o marca 0%
+**Causa:** Mala calibración del sensor INA219.
+**Solución:**
+* Si marca 0%: El sensor está mal conectado (SDA/SCL invertidos) o el fusible del sensor se quemó.
+* Si marca valores raros: Verificar que en el código el mapeo sea correcto para 2 celdas: `map(voltage, 6400, 8400, 0, 100)`.
+
+## Preguntas Frecuentes
+
+<Callout type="info" title="¿Puedo usarlo mientras carga?">
+**NO.** El sistema de carga de baterías LiPo 2S requiere desconectar la carga (el circuito) para balancear las celdas correctamente. Usarlo mientras carga puede dañar el cargador o introducir ruido de red (60Hz) en el audio.
 </Callout>
 
-2. **Verificar regulador**:
-   - Medir pin 3V3 (debe ser 3.28-3.35V)
-   - Si no hay 3.3V pero sí hay 5V, el regulador LDO está dañado
-
-3. **Botones BOOT y EN**:
-   - Mantener presionado BOOT + EN
-   - Soltar EN primero, luego BOOT
-   - Debe entrar en modo bootloader
-
-**Si nada funciona**: Posible chip dañado. Reemplazar ESP32.
-
-#### Batería No Carga
-
-**Síntomas**: LED rojo del TP4056 no enciende, o parpadea
-
-**Checklist**:
-- [ ] USB proporciona 5V (medir con multímetro)
-- [ ] Batería está conectada correctamente (+/- no invertidos)
-- [ ] Batería no está completamente descargada (&lt;2.5V)
-- [ ] Resistencia Rprog presente y correcta (~1.2kΩ para 1A)
-
-```
-Diagnóstico de LEDs TP4056:
-
-🔴 Rojo ON, Azul OFF    → Cargando (OK)
-🔵 Rojo OFF, Azul ON    → Carga completa (OK)
-⚫ Ambos OFF             → Sin conexión USB o batería
-🔴 Rojo parpadeante     → Temperatura alta o batería defectuosa
-🔴🔵 Ambos ON           → Error crítico del módulo
-```
-
-**Si batería < 2.5V** (descarga profunda):
-```cpp
-// Recuperar batería con carga lenta
-// Conectar resistor de 10Ω en serie con USB
-// Cargar 30 min hasta que alcance 3.0V
-// Luego conectar normalmente
-```
-
-<Callout type="danger">
-**⚠️ NUNCA** cargues una batería Li-Po hinchada, caliente o dañada físicamente. Descártala de forma segura.
+<Callout type="info" title="¿Qué pasa si pierdo la conexión Bluetooth?">
+El sistema es autónomo. Si el celular se desconecta o se apaga, los postes dejarán de sonar automáticamente tras terminar su ciclo actual de 3 repeticiones. No se quedarán "pegados" sonando.
 </Callout>
 
-#### No Hay Sonido del Altavoz
-
-**Diagnóstico paso a paso**:
-
-1. **Test del DAC directamente**:
-```cpp
-void testDAC() {
-  // Conectar audífonos con resistor 100Ω en serie a GPIO25
-  for(int i = 0; i < 3; i++) {
-    dacWrite(25, 128 + 50 * sin(millis() / 100.0));
-    delay(10);
-  }
-  // ¿Escuchas tono? → DAC funciona
-}
-```
-
-2. **Test del amplificador**:
-   - Verifica 3.3V en VCC del PAM8403
-   - Mide voltaje en IN+ (debe variar entre 0-3.3V)
-   - Conecta audífonos directamente a salida de PAM8403
-
-3. **Test del altavoz**:
-   - Medir resistencia: debe ser 3-5Ω para altavoz de 4Ω
-   - Si es ∞Ω (abierto), la bobina está quemada
-   - Conectar altavoz directamente a fuente con resistor (test de movimiento)
-
-**Matriz de diagnóstico**:
-
-| DAC | Amplificador | Altavoz | Problema |
-|-----|--------------|---------|----------|
-| ✅ | ✅ | ✅ | Revisar volumen en código |
-| ✅ | ✅ | ❌ | Altavoz dañado |
-| ✅ | ❌ | - | PAM8403 dañado o mal conectado |
-| ❌ | - | - | ESP32 o pin dañado |
-
-### 📡 Comunicación ESP-NOW
-
-#### Dispositivos No se Comunican
-
-**Síntoma**: Maestro envía pero esclavo no recibe
-
-**Verificación 1: Direcciones MAC**
-
-```cpp
-void printMAC() {
-  WiFi.mode(WIFI_STA);
-  Serial.print("Mi MAC: ");
-  Serial.println(WiFi.macAddress());
-  
-  // Comparar con MACs en config.h
-}
-```
-
-**Verificación 2: Canal WiFi**
-
-```cpp
-void checkWiFiChannel() {
-  uint8_t primary;
-  wifi_second_chan_t second;
-  esp_wifi_get_channel(&primary, &second);
-  
-  Serial.print("Canal WiFi: ");
-  Serial.println(primary);
-  
-  // Ambos dispositivos deben estar en mismo canal
-}
-```
-
-**Verificación 3: Callback registrado**
-
-```cpp
-// EN ESCLAVO - asegúrate que este código existe:
-void setup() {
-  WiFi.mode(WIFI_STA);
-  esp_now_init();
-  esp_now_register_recv_cb(OnDataRecv);  // ← CRUCIAL
-}
-```
-
-**Debugging completo**:
-
-```cpp
-void debugESPNOW() {
-  Serial.println("\n=== ESP-NOW Debug ===");
-  
-  // 1. WiFi Mode
-  Serial.print("WiFi Mode: ");
-  Serial.println(WiFi.getMode());  // Debe ser WIFI_STA (1)
-  
-  // 2. MAC Address
-  Serial.print("MAC: ");
-  Serial.println(WiFi.macAddress());
-  
-  // 3. Canal
-  uint8_t channel;
-  wifi_second_chan_t second;
-  esp_wifi_get_channel(&channel, &second);
-  Serial.print("Canal: ");
-  Serial.println(channel);
-  
-  // 4. Peers registrados (solo maestro)
-  esp_now_peer_num_t peerNum;
-  esp_now_get_peer_num(&peerNum);
-  Serial.print("Peers: ");
-  Serial.println(peerNum.total_num);
-  
-  // 5. Potencia TX
-  int8_t power;
-  esp_wifi_get_max_tx_power(&power);
-  Serial.print("TX Power: ");
-  Serial.print(power);
-  Serial.println(" dBm");
-}
-```
-
-#### Pérdida de Paquetes
-
-**Síntomas**: Mensajes llegan esporádicamente, no de forma confiable
-
-**Causas**:
-1. **Interferencia WiFi**: Otro router en mismo canal
-2. **Distancia excesiva**: >100m con obstáculos
-3. **Congestión de 2.4GHz**: Muchos dispositivos BT/WiFi
-4. **Antena no óptima**: Orientación o daño físico
-
-**Soluciones**:
-
-```cpp
-// 1. Cambiar canal WiFi
-void setOptimalChannel() {
-  esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
-  // Canales recomendados: 1, 6, 11 (menos overlap)
-}
-
-// 2. Aumentar potencia
-void increaseRange() {
-  esp_wifi_set_max_tx_power(84);  // Máximo: 84 (20dBm)
-}
-
-// 3. Retry automático
-void sendReliable(uint8_t *mac, gitaf_message *msg) {
-  for(int attempt = 0; attempt < 3; attempt++) {
-    esp_err_t result = esp_now_send(mac, (uint8_t*)msg, sizeof(*msg));
-    
-    if(result == ESP_OK) {
-      Serial.println("Enviado OK");
-      return;
-    }
-    
-    Serial.print("Reintento ");
-    Serial.println(attempt + 1);
-    delay(10);
-  }
-  
-  Serial.println("FALLO después de 3 intentos");
-}
-
-// 4. Monitoreo de calidad de señal
-void monitorRSSI() {
-  // Solo funciona si hay conexión WiFi
-  int32_t rssi = WiFi.RSSI();
-  Serial.print("RSSI: ");
-  Serial.print(rssi);
-  Serial.println(" dBm");
-  
-  if(rssi > -50) Serial.println("Excelente");
-  else if(rssi > -60) Serial.println("Bueno");
-  else if(rssi > -70) Serial.println("Regular");
-  else Serial.println("Débil");
-}
-```
-
-#### Mensajes Corruptos
-
-**Síntoma**: Checksum falla, datos recibidos incorrectos
-
-**Causa**: Ruido eléctrico, interferencia, bug en código
-
-**Verificación**:
-
-```cpp
-void validateMessage(gitaf_message *msg) {
-  // 1. Verificar rango de valores
-  if(msg->deviceID > 3) {
-    Serial.println("ERROR: deviceID inválido");
-    return;
-  }
-  
-  if(msg->command > 10) {
-    Serial.println("ERROR: comando inválido");
-    return;
-  }
-  
-  if(msg->volume > 255) {
-    Serial.println("ERROR: volumen inválido");
-    return;
-  }
-  
-  // 2. Calcular checksum
-  uint8_t calculated = calculateChecksum(msg);
-  
-  if(calculated != msg->checksum) {
-    Serial.println("ERROR: Checksum no coincide");
-    Serial.print("Calculado: 0x");
-    Serial.print(calculated, HEX);
-    Serial.print(" | Recibido: 0x");
-    Serial.println(msg->checksum, HEX);
-    return;
-  }
-  
-  Serial.println("Mensaje válido");
-}
-```
-
-### 🔋 Energía y Batería
-
-#### ESP32 se Reinicia Aleatoriamente
-
-**Síntomas**: "rst:0x8 (TG1WDT_SYS_RESET)" o "Brownout detector was triggered"
-
-**Causas**:
-1. **Brownout**: Voltaje cae &lt;2.8V momentáneamente
-2. **Pico de corriente**: Audio consume más de lo que batería puede dar
-3. **Watchdog Timer**: Código bloqueado &gt;8 segundos
-
-**Soluciones**:
-
-```cpp
-// 1. Desactivar detector de brownout (temporalmente para debug)
-void setup() {
-  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);  // ¡Usar con cuidado!
-}
-
-// 2. Agregar capacitor de desacople (hardware)
-// 100µF entre VIN y GND, cerca del ESP32
-
-// 3. Reducir CPU freq cuando no se usa
-void reducePower() {
-  setCpuFrequencyMhz(80);  // De 240MHz a 80MHz
-}
-
-// 4. Alimentar watchdog
-void setup() {
-  enableLoopWDT();  // Habilitar watchdog
-}
-
-void loop() {
-  feedLoopWDT();  // Alimentar cada iteración
-  
-  // Tu código aquí
-  
-  delay(10);
-}
-
-// 5. Monitorear voltaje en tiempo real
-void checkBrownout() {
-  float voltage = readBatteryVoltage();
-  
-  if(voltage < 3.3) {
-    Serial.println("⚠️ VOLTAJE BAJO - Reduciendo consumo");
-    
-    // Reducir CPU
-    setCpuFrequencyMhz(80);
-    
-    // Bajar volumen de audio
-    audioManager.setVolume(150);
-    
-    // Avisar al maestro
-    sendLowBatteryAlert();
-  }
-  
-  if(voltage < 3.0) {
-    Serial.println("🔴 CRÍTICO - Apagando");
-    esp_deep_sleep_start();
-  }
-}
-```
-
-#### Batería Dura Muy Poco
-
-**Mediciones de consumo**:
-
-```cpp
-void analyzePowerConsumption() {
-  float vBefore = readBatteryVoltage();
-  unsigned long tStart = millis();
-  
-  // Tu código a medir
-  audioManager.play(2000, 10000);  // 10s de audio
-  
-  unsigned long tEnd = millis();
-  float vAfter = readBatteryVoltage();
-  
-  float voltageDropped = vBefore - vAfter;
-  float timeHours = (tEnd - tStart) / 3600000.0;
-  
-  // Estimación de consumo
-  // I = ΔV / (R * Δt), aproximadamente
-  float mAh_consumed = (voltageDropped * 2000) / 3.7;  // Para batería 2000mAh
-  
-  Serial.print("Consumo estimado: ");
-  Serial.print(mAh_consumed);
-  Serial.println(" mAh");
-  
-  Serial.print("Autonomía proyectada: ");
-  Serial.print(2000 / (mAh_consumed / timeHours));
-  Serial.println(" horas");
-}
-```
-
-**Optimizaciones**:
-
-```cpp
-// Reducir consumo en espera
-void enterLightSleep() {
-  esp_sleep_enable_timer_wakeup(100000);  // 100ms
-  esp_light_sleep_start();
-  
-  // Consumo: ~2mA vs 100mA activo
-}
-
-// Apagar módulos no usados
-void disableUnusedModules() {
-  // Apagar Bluetooth si no se usa
-  btStop();
-  
-  // Apagar WiFi si solo usas ESP-NOW
-  // (NO hacer esto - ESP-NOW necesita WiFi stack)
-  
-  // Apagar ADC si no monitoreas batería
-  adc_power_off();
-}
-
-// Smart Sleep entre comandos
-unsigned long lastActivity = 0;
-
-void loop() {
-  if(millis() - lastActivity > 30000) {
-    // 30s sin actividad
-    Serial.println("Entrando en sleep...");
-    esp_light_sleep_start();
-  }
-  
-  // Procesar comandos ESP-NOW
-  // (OnDataRecv se llama aunque estés en light sleep)
-}
-```
-
-### 💻 Software y Firmware
-
-#### "Sketch too big" al Compilar
-
-**Error**: Sketch uses 120% of program storage space
-
-**Causas**:
-- Muchas librerías incluidas
-- Debug symbols habilitados
-- Partition scheme incorrecta
-
-**Soluciones**:
-
-1. **Cambiar partition scheme**:
-   - Tools → Partition Scheme → "No OTA (2MB APP/2MB SPIFFS)"
-   - O "Minimal SPIFFS (1.9MB APP with OTA)"
-
-2. **Optimizar compilación**:
-```ini
-# platformio.ini
-build_flags = 
-    -Os                     # Optimizar por tamaño
-    -DCORE_DEBUG_LEVEL=0   # Sin debug
-    -ffunction-sections
-    -fdata-sections
-```
-
-3. **Remover código no usado**:
-```cpp
-// Comentar includes no necesarios
-// #include <WiFiClient.h>  // No usado
-// #include <HTTPClient.h>   // No usado
-
-// Usar forward declarations
-class AudioManager;  // En lugar de #include "audio_manager.h"
-```
-
-4. **Ver tamaño de secciones**:
-```bash
-# Linux/macOS
-xtensa-esp32-elf-nm -S --size-sort build/*.elf | tail -20
-
-# Windows (en PowerShell de PlatformIO)
-pio run --target size
-```
-
-#### Upload Falla: "Timed out waiting for packet header"
-
-**Soluciones**:
-
-1. **Método BOOT manual**:
-   - Mantener BOOT presionado
-   - Click "Upload"
-   - Cuando vea "Connecting...", soltar BOOT
-
-2. **Agregar delay en setup()**:
-```cpp
-void setup() {
-  delay(3000);  // 3s de tiempo para conectar
-  Serial.begin(115200);
-  // resto del código
-}
-```
-
-3. **Bajar velocidad de upload**:
-   - Tools → Upload Speed → "115200" (en lugar de 921600)
-
-4. **Resetear configuración**:
-```cpp
-void resetESP32() {
-  esp_wifi_restore();  // Restaurar config WiFi
-  ESP.restart();
-}
-```
-
-#### Monitor Serial Muestra Caracteres Extraños
-
-**Causa**: Baud rate incorrecto
-
-**Solución**:
-```cpp
-void setup() {
-  Serial.begin(115200);  // Asegurar 115200
-  while(!Serial) delay(10);
-  
-  Serial.println("\n\n=== GITAF Started ===");
-}
-```
-
-En Arduino IDE:
-- Tools → Monitor Serial → 115200 baud
-
-En PlatformIO:
-```ini
-monitor_speed = 115200
-monitor_filters = 
-    esp32_exception_decoder  # Decodificar stack traces
-    default
-```
-
-### 📱 Integración con App
-
-#### App No Encuentra el Dispositivo Bluetooth
-
-**En el ESP32**:
-
-```cpp
-void setupBLE() {
-  BLEDevice::init("GITAF-Master");  // Nombre visible
-  BLEServer *pServer = BLEDevice::createServer();
-  
-  // Asegurar que advertising esté activo
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->start();
-  
-  Serial.println("BLE Advertising iniciado");
-  Serial.print("Nombre: ");
-  Serial.println("GITAF-Master");
-}
-```
-
-**En la App Android**:
-- Verificar permisos BLUETOOTH_SCAN y ACCESS_FINE_LOCATION
-- Android 12+ requiere BLUETOOTH_CONNECT
-
-#### Comandos Bluetooth No llegan a ESP-NOW
-
-**Debug del flujo**:
-
-```cpp
-// En el maestro
-void onBLEcommand(uint8_t postID) {
-  Serial.print("BLE → Comando recibido: POST_");
-  Serial.println(postID);
-  
-  // Verificar que ESP-NOW está inicializado
-  if(esp_now_is_peer_exist(slaveLeftMAC)) {
-    Serial.println("ESP-NOW → Peer existe, enviando...");
-    
-    sendCommand(postID, CMD_PLAY_AUDIO);
-    
-    Serial.println("ESP-NOW → Comando enviado");
-  } else {
-    Serial.println("ERROR: Peer no existe!");
-    initESPNOW();  // Reinicializar
-  }
-}
-```
-
-## Comandos de Diagnóstico Útiles
-
-### Monitor Serial Avanzado
-
-```cpp
-void printSystemInfo() {
-  Serial.println("\n╔════════════════════════════");
-  Serial.println("║  GITAF System Info");
-  Serial.println("╠════════════════════════════");
-  
-  // Versión firmware
-  Serial.print("║ Firmware: ");
-  Serial.println(FIRMWARE_VERSION);
-  
-  // Tipo de dispositivo
-  Serial.print("║ Tipo: ");
-  Serial.println(DEVICE_TYPE);
-  
-  // Chip ID
-  Serial.print("║ Chip ID: 0x");
-  Serial.println(ESP.getEfuseMac(), HEX);
-  
-  // MAC Address
-  Serial.print("║ MAC: ");
-  Serial.println(WiFi.macAddress());
-  
-  // CPU Freq
-  Serial.print("║ CPU: ");
-  Serial.print(getCpuFrequencyMhz());
-  Serial.println(" MHz");
-  
-  // Memoria
-  Serial.print("║ Heap libre: ");
-  Serial.print(ESP.getFreeHeap() / 1024);
-  Serial.println(" KB");
-  
-  // Batería
-  float voltage = readBatteryVoltage();
-  Serial.print("║ Batería: ");
-  Serial.print(voltage);
-  Serial.print("V (");
-  Serial.print(getBatteryPercentage(voltage));
-  Serial.println("%)");
-  
-  // Uptime
-  Serial.print("║ Uptime: ");
-  Serial.print(millis() / 1000);
-  Serial.println(" s");
-  
-  Serial.println("╚════════════════════════════\n");
-}
-```
-
-### Test de Hardware Completo
-
-```cpp
-void fullSystemTest() {
-  Serial.println("\n*** TEST COMPLETO DEL SISTEMA ***\n");
-  
-  // 1. Test LED
-  Serial.println("[1/6] Test LED...");
-  testLED();
-  delay(1000);
-  
-  // 2. Test DAC
-  Serial.println("[2/6] Test DAC/Audio...");
-  testAudioSystem();
-  delay(1000);
-  
-  // 3. Test ESP-NOW
-  Serial.println("[3/6] Test ESP-NOW...");
-  debugESPNOW();
-  delay(1000);
-  
-  // 4. Test Batería
-  Serial.println("[4/6] Test Batería...");
-  testBattery();
-  delay(1000);
-  
-  // 5. Test Memoria
-  Serial.println("[5/6] Test Memoria...");
-  testMemory();
-  delay(1000);
-  
-  // 6. Test Conectividad
-  Serial.println("[6/6] Test Conectividad...");
-  testConnectivity();
-  
-  Serial.println("\n*** TEST COMPLETADO ***\n");
-}
-```
-
-## Preguntas Frecuentes (FAQ)
-
-<details>
-<summary>**¿Puedo usar ESP8266 en lugar de ESP32?**</summary>
-
-No recomendado. ESP8266 no tiene:
-- DAC (necesitarías módulo externo)
-- Dual-core (peor manejo de ESP-NOW + Audio)
-- Menos RAM (160KB vs 520KB)
-
-Aunque técnicamente posible, el ESP32 es mucho mejor para este proyecto.
-
-</details>
-
-<details>
-<summary>**¿Cuánta distancia puedo cubrir con ESP-NOW?**</summary>
-
-En campo abierto: hasta 200-250 metros
-Con obstáculos: 50-100 metros
-En interiores: 30-50 metros
-
-El alcance depende de:
-- Orientación de las antenas
-- Interferencias (WiFi, BT, microondas)
-- Obstáculos (paredes, metal)
-- Potencia de transmisión configurada
-
-</details>
-
-<details>
-<summary>**¿Puedo agregar más de 3 postes?**</summary>
-
-Sí. ESP-NOW soporta hasta **20 dispositivos esclavos** por maestro.
-
-Solo necesitas:
-1. Agregar más entries en el array de MACs
-2. Actualizar la app para tener más botones
-3. Programar los ESP32 adicionales como esclavos
-
-</details>
-
-<details>
-<summary>**¿Funciona bajo lluvia?**</summary>
-
-Solo si las cajas son **IP65+** (resistentes al agua).
-
-Recomendaciones:
-- Sellar todas las aberturas con silicona
-- Usar conectores impermeables
-- Bolsas zip como backup en lluvia fuerte
-- Nunca cargar módulos mojados
-
-</details>
-
-<details>
-<summary>**¿Puedo usar baterías de mayor capacidad?**</summary>
-
-Sí. Puedes usar hasta 5000-6000 mAh sin problemas.
-
-Consideraciones:
-- Mayor peso en los postes
-- Mayor tiempo de carga
-- Verificar que TP4056 soporte corriente de descarga
-
-</details>
-
-## Obtener Más Ayuda
-
-### Reportar un Bug
-
-**Antes de reportar**:
-1. Corre `fullSystemTest()` y guarda el Log
-2. Anota versión de firmware
-3. Describe pasos para reproducir
-4. Incluye fotos de conexiones si es problema de hardware
-
-**Dónde reportar**:
-- GitHub Issues: [github.com/tu-usuario/gitaf/issues](https://github.com)
-- Email: soporte@gitaf.com
-- Foro: forum.gitaf.com
-
-### Logs Útiles para Soporte
-
-```cpp
-void generateDiagnosticLog() {
-  Serial.println("\n===== DIAGNOSTIC LOG =====");
-  Serial.println("Generated: " + String(millis()/1000) + "s after boot");
-  
-  printSystemInfo();
-  debugESPNOW();
-  testBattery();
-  
-  // Últimos errores
-  Serial.println("\n--- Últimos Errores ---");
-  // Aquí puedes agregar un buffer circular de errores
-  
-  Serial.println("\n===== END LOG =====\n");
-  
-  // Copiar todo el output y enviarlo a soporte
-}
-```
-
-## Recursos Adicionales
-
-- 📖 [Documentación Completa](/docs/introduction)
-- 💻 [GitHub Repository](https://github.com/tu-usuario/gitaf)
-- 🎥 [Video Tutorials](https://youtube.com/gitaf)
-- 💬 [Community Forum](https://forum.gitaf.com)
-- 📧 [Contacto: soporte@gitaf.com](mailto:soporte@gitaf.com)
+---
+
+### ¿Necesitas ayuda técnica?
+
+Si el problema persiste, conecta el dispositivo al puerto USB, abre el **Monitor Serial** de Arduino (115200 baudios) y copia el registro de arranque para enviarlo al equipo de soporte.
+
+**Ejemplo de Log Saludable:**
+```text
+[INICIO] Sistema GITAF Master Arrancando...
+[OK] Sensor Bateria Listo
+[OK] Modulo de Audio Listo
+[BLE] Dispositivo Movil CONECTADO
+[ESTADO] Bateria: 95%
