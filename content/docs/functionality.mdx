@@ -1,30 +1,58 @@
 ---
-title: Funcionalidad de Gitaf
-description: Explora la funcionalidad del proyecto GITAF
+title: Funcionalidad de GITAF
+description: Desglose funcional y lógica de operación del sistema GITAF PRO
 ---
 
+import { Cards, Card } from 'fumadocs-ui/components/card';
+import { Callout } from 'fumadocs-ui/components/callout';
+
 ## Diagrama de Funcionalidad
+
 ![GITAF Diagram](../assets/diagram.jpg)
 
-El diagrama presentado ilustra la estructura funcional del **Sistema de Orientación Audible (GITAF)**. Esta solución tecnológica está diseñada para dotar de autonomía a los deportistas con discapacidad visual durante la práctica del Fútbol 5 Adaptado.
+El sistema **GITAF PRO** opera bajo un modelo de **inteligencia distribuida**. A diferencia de los altavoces Bluetooth convencionales que solo reproducen lo que se les envía, cada nodo en GITAF tiene su propia lógica de decisión, temporizadores y gestión de energía.
 
-## Explicaciones técnicas
+## Módulos del Sistema
 
 ### 1. Interfaz de Control (App Android)
-El punto de entrada al sistema es una aplicación móvil que prioriza la **accesibilidad universal**, incorporando soporte nativo para **TalkBack** y una interfaz de alto contraste. Permite seleccionar el poste (Izquierdo, Central, Derecho) y gestionar la conexión Bluetooth.
+La aplicación no transmite audio, sino **instrucciones lógicas**. Esto garantiza que la conexión sea rápida y estable incluso a largas distancias.
 
-### 2. Módulo Maestro (El Cerebro)
-El núcleo del procesamiento. Equipado con un **ESP32 Principal** que cumple doble función:
-- **Receptor Bluetooth:** Recibe instrucciones de la App.
-- **Emisor ESP-NOW:** Traduce y envía señales inalámbricas a los postes.
+- **Selección de Objetivo:** Permite activar independientemente el **Maestro (Local)**, **Esclavo 1** o **Esclavo 2**.
+- **Panel de Telemetría:** Decodifica y visualiza en tiempo real el porcentaje de carga de las tres baterías, alertando al entrenador si algún nodo baja del 20%.
+- **Conexión Transparente:** Se vincula automáticamente al dispositivo identificado como **"Gitaf Pro"**.
 
-### 3. Módulos Esclavos (Sonido)
-Ubicados en la portería. Cada módulo funciona independientemente con un **Receptor ESP-32**, mediante el protocolo **ESP-NOW**, un altavoz para la señal acústica y una batería propia, eliminando el uso de cables.
+### 2. Módulo Maestro (Nodo Híbrido)
+El ESP32 central actúa como el cerebro de la red, desempeñando tres funciones simultáneas:
 
-### 4. Usuarios y Contexto
-El diseño responde a las necesidades de **ANVIZSUC**, con el objetivo de mejorar la autonomía en el tiro y la orientación espacial sin depender de un guía humano.
+1.  **Gateway de Comunicaciones:** Traduce los comandos Bluetooth de la App a paquetes ESP-NOW para los esclavos.
+2.  **Emisor de Audio Local:** Posee su propio amplificador y altavoz. Al recibir el comando `"11"`, ejecuta su propia secuencia de sonido para servir como punto de referencia central o posición del entrenador.
+3.  **Concentrador de Datos:** Recibe los reportes de voltaje de los esclavos, los unifica con su propia lectura (INA219) y envía un paquete consolidado a la App.
 
-<Cards>
-  <Card title="Ver Antecedentes" href="https://github.com/tu-usuario/repo" />
-  <Card title="Documentación Técnica" href="/docs/technical" />
-</Cards>
+### 3. Módulos Esclavos (Nodos Satélite)
+Los dispositivos ubicados en las porterías son totalmente autónomos. Su funcionalidad se basa en el principio de **"Activación por Eventos"**:
+
+- **Secuenciador Automático:** Al recibir la señal de activación, el esclavo inicia un bucle local: *Reproducir → Esperar 3 seg → Reproducir*.
+- **Auto-Apagado Inteligente:** Tras cumplir **3 ciclos** de reproducción, el dispositivo corta el audio automáticamente y entra en modo de espera (Standby) para maximizar la batería.
+- **Retorno de Estado:** Cada 2 segundos, despierta su radio brevemente para enviar su nivel de batería al Maestro.
+
+## Lógica de Operación
+
+El sistema está programado para evitar la saturación auditiva y facilitar la orientación mediante secuencias predecibles.
+
+### Ciclo de Disparo de Audio
+Cada vez que el entrenador presiona un botón en la App, ocurre la siguiente secuencia lógica en el hardware:
+
+```mermaid
+graph LR
+    A[Inicio: Comando APP] --> B{¿Es Local o Remoto?}
+    
+    B -- Local (Maestro) --> C[Activar DFPlayer Local]
+    B -- Remoto (Esclavo) --> D[Enviar Trama ESP-NOW]
+    
+    C --> E[Bucle: 3 Repeticiones]
+    D --> F[Esclavo Recibe Señal]
+    
+    F --> G[Bucle Esclavo: 3 Repeticiones]
+    
+    E --> H[Standby Automático]
+    G --> H

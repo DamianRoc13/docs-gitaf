@@ -1,32 +1,78 @@
 ---
-title: Aplicación móvil
-description: Detalles del funcionamiento de la aplicación GITAF
+title: Aplicación Móvil
+description: Guía de uso e interfaz de la aplicación de control GITAF para Android
 ---
 
 import { Cards, Card } from 'fumadocs-ui/components/card';
+import { Callout } from 'fumadocs-ui/components/callout';
 
-En este apartado se verán todas las pantallas con las que cuenta la app mobile de GITAF.
+## Visión General
+
+La aplicación móvil **GITAF** actúa como el centro de mando del sistema. Desarrollada nativamente para el ecosistema **Android**, se distribuye mediante archivo instalable (**APK**) para garantizar la compatibilidad con dispositivos sin necesidad de tienda de aplicaciones.
+
+Su diseño prioriza dos aspectos fundamentales:
+1.  **Control Total:** Gestión de los 3 nodos de audio y monitoreo de energía.
+2.  **Accesibilidad Universal:** Detección automática de herramientas de asistencia (TalkBack).
+
+---
+
+## Recorrido por la Interfaz
+
+A continuación se detallan los flujos de interacción diseñados para entrenadores y deportistas.
 
 <Cards>
-  <Card title="1. Pantalla de Inicio" href="#">
-    Una pantalla muy simple la cual permite al usuario redirigir a la pantalla de conexión, mostrando el logo como principal atractivo visual.
-    ![1](../assets/1.jpeg)
+  <Card title="1. Pantalla de Bienvenida" href="#">
+    La puerta de entrada al sistema. Presenta la identidad visual del proyecto y carga los servicios necesarios en segundo plano (Bluetooth y Permisos).
+    
+    ![Pantalla de Inicio](../assets/1.jpeg)
   </Card>
   
-  <Card title="2. Pantalla de Conexión" href="#">
-    En esta pantalla el usuario podrá comenzar el escanéo de todos los dispositivos **Bluetooth** cercanos, eligiendo así el dispositivo **ESP-32** entre la lista de dispositivos.
-    ![3](../assets/3.jpeg)
+  <Card title="2. Conexión Bluetooth" href="#">
+    Gestor de escaneo BLE (Bluetooth Low Energy). Aquí la aplicación busca dispositivos cercanos y filtra la señal para encontrar el módulo maestro.
+    
+    **Acción:** El usuario debe seleccionar el dispositivo llamado **"Gitaf Pro"** para establecer el enlace de datos.
+    ![Pantalla de Conexión](../assets/3.jpeg)
   </Card>
 
-  <Card title="3. Pantalla de Control" href="#">
-    Esta pantalla es de uso exclusivo para personas videntes o con discapacidad visual parcial. En esta pantalla el usuario podrá seleccionar la ubicación en la cual se desea reproducir el sonido, 
-    teniendo 3 opciones como principales (Derecha, Centro e Izquierda). 
-    ![4](../assets/4.jpeg)
+  <Card title="3. Panel de Control (Modo Visual)" href="#">
+    Interfaz estándar para entrenadores o personas con visión parcial.
+    
+    **Funcionalidades:**
+    * **Botonera Direccional:** Activación independiente de postes (Izquierda, Centro, Derecha).
+    * **Monitor de Batería:** Visualización en tiempo real del porcentaje de carga de los 3 nodos (Maestro y Esclavos), recibidos desde la telemetría del sistema.
+    ![Pantalla de Control](../assets/4.jpeg)
   </Card>
 
-  <Card title="4. Pantalla de Control en modo TalkBack" href="#">
-    Esta pantalla es de uso exclusivo para personas no videntes, estilizada con un diseño simple y funcional, así mismo permitiendo al usuario escoger en qué dirección quiere que se reproduzca un sonido.
-    No es necesario seleccionarla manualmente, la aplicación detecta si el usuario tiene activado TalkBack en su dispositivo y redirige automáticamente a la pantalla de Control en modo TalkBack.
-    ![5](../assets/5.jpeg)
+  <Card title="4. Modo Accesible (TalkBack)" href="#">
+    Interfaz simplificada de alto contraste.
+    
+    **Detección Inteligente:** La app detecta si el lector de pantalla Android (TalkBack) está activo y cambia automáticamente a esta vista. Elimina elementos decorativos para facilitar la navegación por deslizamiento y toque.
+    ![Pantalla TalkBack](../assets/5.jpeg)
   </Card>
 </Cards>
+
+---
+
+## Requisitos de Instalación
+
+Al ser una aplicación distribuida fuera de Google Play Store, requiere una configuración inicial sencilla.
+
+### Especificaciones Técnicas
+| Requisito | Detalle |
+| :--- | :--- |
+| **Sistema Operativo** | Android 8.0 (Oreo) o superior |
+| **Formato** | Archivo `.apk` (Android Package) |
+| **Conectividad** | Bluetooth 4.0+ (BLE Support) |
+
+<Callout type="warn" title="Permisos Necesarios">
+Para que el escaneo Bluetooth funcione correctamente en Android, la aplicación solicitará dos permisos críticos al iniciarse:
+1.  **Ubicación (GPS):** Requerido por Android para detectar balizas BLE cercanas.
+2.  **Dispositivos Cercanos:** Permiso para vincularse con hardware externo (Gitaf Pro).
+</Callout>
+
+### Cómo Instalar el APK
+
+1.  Descarga el archivo `Gitaf_App_v1.0.apk` en tu dispositivo.
+2.  Al abrirlo, Android te pedirá permiso para **"Instalar aplicaciones de fuentes desconocidas"**.
+3.  Otorga el permiso al navegador o gestor de archivos.
+4.  Presiona "Instalar" y luego "Abrir".

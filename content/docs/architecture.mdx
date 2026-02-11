@@ -1,182 +1,58 @@
 ---
 title: Arquitectura del Sistema
-description: Arquitectura técnica y flujo de comunicación del sistema GITAF
+description: Arquitectura técnica, topología de red y flujo de datos del sistema GITAF PRO
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 ## Visión General de la Arquitectura
 
-El sistema GITAF está compuesto por tres componentes principales que trabajan de manera integrada para proporcionar orientación audible a los deportistas:
+El sistema GITAF PRO implementa una arquitectura distribuida de **topología estrella híbrida**, compuesta por tres nodos inteligentes de audio que operan simultáneamente para cubrir el campo de entrenamiento de fútbol adaptado.
 
-### 1. Capa de Aplicación (Android App)
+### 1. Capa de Control (Android App)
 
-La aplicación móvil actúa como **interfaz de control** del sistema. Sus responsabilidades incluyen:
+La aplicación actúa como el panel de mando y monitor de estado. No procesa audio, solo envía disparadores lógicos y visualiza telemetría.
 
-- **Selección de Poste**: Interfaz para elegir entre Izquierdo, Central o Derecho
-- **Gestión de Conexión**: Escaneo y conexión Bluetooth con el módulo maestro
-- **Accesibilidad**: Soporte completo para TalkBack y diseño de alto contraste
-- **Feedback Visual/Audio**: Confirmación de acciones para el usuario
+- **Comandos BLE**: Envía instrucciones codificadas (`"11"`, `"21"`, `"31"`) para activar secuencias.
+- **Recepción de Telemetría**: Escucha notificaciones BLE con el estado de batería de los 3 dispositivos (`M:90,S1:85,S2:40`).
+- **Gestión de Conexión**: Escaneo y vinculación automática con el dispositivo *"Gitaf Pro"*.
+
+### 2. Nodo Central (Módulo Maestro)
+
+El **ESP32 Maestro** es el núcleo de la red. A diferencia de un gateway tradicional, este nodo cumple una **doble función**:
+
+1.  **Emisor de Audio Local**: Procesa el comando `"11"` para generar sonido en su propia ubicación (ej. posición del entrenador o centro).
+2.  **Puente de Comunicaciones**:
+    - Traduce comandos Bluetooth (App) a protocolos ESP-NOW (Esclavos).
+    - Recolecta datos de batería de los esclavos, los agrega a sus propios datos y los envía al móvil.
+
+### 3. Nodos Periféricos (Módulos Esclavos)
+
+Los **Esclavos 1 y 2** son dispositivos satélites totalmente inalámbricos situados en las porterías o postes objetivos.
+
+- **Autonomía Lógica**: Al recibir la señal de activación, ejecutan localmente un bucle de audio (3 repeticiones cada 3 segundos) y se apagan solos. No requieren conexión constante para mantener el sonido.
+- **Reporte Activo**: Envían proactivamente su nivel de voltaje (leído por INA219) hacia el Maestro cada 2 segundos.
+
+## Diagrama de Flujo de Datos
 
 ```mermaid
 graph TD
-    A[Usuario] -->|Selecciona Poste| B[App Android]
-    B -->|Bluetooth LE| C[Módulo Maestro ESP32]
-```
-
-### 2. Capa de Procesamiento (Módulo Maestro)
-
-El **ESP32 Principal** funciona como cerebro central del sistema:
-
-- **Receptor Bluetooth**: Recibe comandos de la aplicación móvil
-- **Procesador de Comandos**: Interpreta las instrucciones del usuario
-- **Transmisor ESP-NOW**: Envía señales al poste correspondiente
-- **Gestión de Estado**: Mantiene el estado actual del sistema
-
-<Callout type="info">
-El módulo maestro utiliza **ESP-NOW** en lugar de WiFi tradicional para lograr:
-- Menor latencia en la comunicación
-- Menor consumo de energía
-- Mayor alcance en espacios abiertos
-</Callout>
-
-### 3. Capa de Actuación (Módulos Esclavos)
-
-Cada poste cuenta con un **Módulo ESP32 Esclavo** independiente:
-
-- **Receptor ESP-NOW**: Escucha señales del maestro
-- **Control de Audio**: Activa/desactiva el altavoz
-- **Gestión de Batería**: Monitoreo de carga y bajo consumo
-- **Identificador Único**: Cada módulo tiene su dirección MAC única
-
-## Flujo de Comunicación
-
-```mermaid
-sequenceDiagram
-    participant U as Usuario
-    participant A as App Android
-    participant M as Maestro ESP32
-    participant E1 as Esclavo Izq
-    participant E2 as Esclavo Centro
-    participant E3 as Esclavo Der
-
-    U->>A: Selecciona "Poste Izquierdo"
-    A->>M: Comando BT: LEFT_POST
-    M->>M: Procesa comando
-    M->>E1: Señal ESP-NOW: ACTIVATE
-    E1->>E1: Reproduce audio
-    E1-->>M: ACK (opcional)
-    M-->>A: Confirmación
-    A-->>U: Feedback visual/audio
-```
-
-## Arquitectura de Red
-
-### Topología Estrella
-
-El sistema utiliza una topología en **estrella**, donde el módulo maestro es el nodo central:
-
-- **Ventajas**:
-  - Fallo de un esclavo no afecta a los demás
-  - Fácil agregar o quitar postes
-  - Troubleshooting simplificado
-  - Control centralizado
-
-- **Desafíos Resueltos**:
-  - Sincronización mediante identificadores únicos
-  - Manejo de colisiones de paquetes
-  - Retry automático en caso de pérdida de señal
-
-## Protocolos de Comunicación
-
-### Bluetooth Low Energy (BLE)
-
-**Usado entre**: App ↔ Maestro
-
-- **Perfil**: GATT (Generic Attribute Profile)
-- **Servicios Personalizados**: Control de postes
-- **Características**: READ/WRITE/NOTIFY
-- **Alcance**: ~10 metros
-- **Consumo**: Ultra bajo en modo standby
-
-### ESP-NOW
-
-**Usado entre**: Maestro ↔ Esclavos
-
-- **Capa**: Data Link (MAC)
-- **Velocidad**: 1 Mbps
-- **Alcance**: Hasta 200m en campo abierto
-- **Encriptación**: AES-128 (opcional)
-- **Latencia**: &lt;10ms
-
-<Callout type="warn">
-ESP-NOW opera en el mismo canal 2.4GHz que WiFi. Asegúrate de usar canales no congestionados para mejor rendimiento.
-</Callout>
-
-## Consideraciones de Diseño
-
-### Escalabilidad
-
-El sistema está diseñado para ser escalable:
-
-- **Horizontal**: Agregar más postes (hasta 20 dispositivos ESP-NOW)
-- **Vertical**: Mejorar potencia de señal o agregar repetidores
-- **Funcional**: Agregar nuevos patrones de audio o modos de entrenamiento
-
-### Confiabilidad
-
-Mecanismos implementados:
-
-- **Watchdog Timer**: Reinicio automático en caso de bloqueo
-- **Redundancia de Mensajes**: Envío múltiple de comandos críticos
-- **Estado de Batería**: Alertas preventivas de batería baja
-- **Logging**: Registro de eventos para debugging
-
-### Seguridad
-
-- **Emparejamiento Bluetooth**: Autenticación antes de conectar
-- **Lista Blanca MAC**: Solo dispositivos autorizados pueden comunicarse
-- **Timeout de Sesión**: Desconexión automática por inactividad
-
-## Diagrama de Componentes
-
-```mermaid
-graph TB
-    subgraph "App Android"
-        UI[Interfaz Usuario]
-        BT[Bluetooth Manager]
-        ACC[Accesibilidad]
+    User[Usuario / Entrenador] -->|Toque en Pantalla| App[App Android]
+    
+    subgraph "Comunicación Bluetooth LE"
+    App -->|Comando '21'| Master[ESP32 Maestro]
+    Master -.->|Notificación Baterías| App
     end
     
-    subgraph "Módulo Maestro"
-        BTR[BT Receiver]
-        CPU[ESP32 Main]
-        ESP[ESP-NOW TX]
+    subgraph "Comunicación ESP-NOW (2.4 GHz)"
+    Master -->|Struct: {'1'}| Slave1[Esclavo 1]
+    Master -->|Struct: {'1'}| Slave2[Esclavo 2]
+    Slave1 -.->|Struct: {85%}| Master
+    Slave2 -.->|Struct: {40%}| Master
     end
     
-    subgraph "Postes"
-        E1[ESP32 Izq]
-        E2[ESP32 Centro]
-        E3[ESP32 Der]
-        S1[Speaker 1]
-        S2[Speaker 2]
-        S3[Speaker 3]
+    subgraph "Salida Física"
+    Master --> AudioM[Audio Local]
+    Slave1 --> AudioS1[Audio Portería 1]
+    Slave2 --> AudioS2[Audio Portería 2]
     end
-    
-    UI --> BT
-    BT -->|BLE| BTR
-    BTR --> CPU
-    CPU --> ESP
-    ESP -->|ESP-NOW| E1
-    ESP -->|ESP-NOW| E2
-    ESP -->|ESP-NOW| E3
-    E1 --> S1
-    E2 --> S2
-    E3 --> S3
-```
-
-## Próximos Pasos
-
-- Revisa la [Lista de Componentes](/docs/hardware/components) para conocer el hardware específico
-- Aprende sobre [Configuración del Firmware](/docs/firmware/setup) para programar los ESP32
-- Explora la [Aplicación Móvil](/docs/mobile) para entender la interfaz de usuario
